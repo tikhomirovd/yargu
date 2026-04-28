@@ -32,6 +32,7 @@ yargumark-registry-sync = "yargumark.registry.cli:sync_registry_command"
 yargumark-process-doc = "yargumark.nlp.cli:process_document_cli"
 yargumark-enrich-aliases = "yargumark.registry.alias_enricher:enrich_aliases_cli"
 yargumark-reindex = "yargumark.index.cli:main"
+yargumark-backfill-titles = "yargumark.crawler.backfill:cli_entry"
 
 [build-system]
 requires = ["hatchling"]

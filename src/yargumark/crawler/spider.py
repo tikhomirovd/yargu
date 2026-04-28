@@ -10,6 +10,7 @@ from scrapy import Request
 from scrapy.http import Response
 
 from yargumark.config import get_settings
+from yargumark.crawler.title import extract_article_title
 from yargumark.db import DocumentRecord, get_connection, upsert_document
 
 START_URLS = (
@@ -50,12 +51,9 @@ class UniyarSpider(scrapy.Spider):
             yield response.follow(next_page_link, callback=self.parse)
 
     def parse_article(self, response: Response) -> None:
-        og_title = response.css('meta[property="og:title"]::attr(content)').get()
-        h1s = response.css("h1::text").getall()
-        title = (og_title or (h1s[1] if len(h1s) >= 2 else h1s[0] if h1s else "")).strip()
-
         extracted = trafilatura.extract(response.text, include_comments=False, include_tables=True)
         body = re.sub(r"\s+", " ", extracted or "").strip()
+        title = extract_article_title(response.text, body)
         if not title or not body:
             return
 
