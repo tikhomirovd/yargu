@@ -585,6 +585,8 @@ def list_documents_with_mentions(
     min_confidence: float,
     source: str | None = None,
     limit: int = 500,
+    *,
+    only_with_mentions: bool = False,
 ) -> list[DocumentSummaryRow]:
     cursor = connection.cursor()
     source_filter = ""
@@ -592,6 +594,14 @@ def list_documents_with_mentions(
     if source is not None:
         source_filter = "AND d.source = ?"
         params.append(source)
+    having = ""
+    if only_with_mentions:
+        having = "HAVING COUNT(m.id) > 0"
+    order_by = (
+        "ORDER BY mention_count DESC, d.fetched_at DESC"
+        if only_with_mentions
+        else "ORDER BY d.fetched_at DESC"
+    )
     params.append(limit)
     cursor.execute(
         f"""
@@ -602,7 +612,8 @@ def list_documents_with_mentions(
           ON m.doc_id = d.id AND m.confidence >= ?
         WHERE 1=1 {source_filter}
         GROUP BY d.id
-        ORDER BY d.fetched_at DESC
+        {having}
+        {order_by}
         LIMIT ?
         """,
         tuple(params),

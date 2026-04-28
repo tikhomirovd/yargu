@@ -21,11 +21,30 @@ settings = app_settings()
 mode = current_ui_mode()
 threshold = ui_threshold(settings, mode)
 
+show_all_docs = st.checkbox(
+    "Показать все документы",
+    value=False,
+    help="Если выключено — только страницы, где найдена хотя бы одна сущность из реестра "
+    "(уверенность не ниже порога текущего режима в боковой панели).",
+)
+
 with db_connection() as conn:
-    catalog = list_documents_with_mentions(conn, threshold, limit=500)
+    catalog = list_documents_with_mentions(
+        conn,
+        threshold,
+        limit=500,
+        only_with_mentions=not show_all_docs,
+    )
 
 if not catalog:
-    st.warning("Нет документов в базе. Запустите краулер или scripts/seed_demo.py.")
+    if not show_all_docs:
+        st.warning(
+            "Ни одного документа, где реестр сработал при текущем пороге. "
+            "Включите «Показать все документы», прогоните NLP по текстам "
+            "или смените режим/порог в боковой панели."
+        )
+    else:
+        st.warning("Нет документов в базе. Запустите краулер или scripts/seed_demo.py.")
     st.stop()
 
 options = {f"{row.id} — {row.title[:80]}": row.id for row in catalog}

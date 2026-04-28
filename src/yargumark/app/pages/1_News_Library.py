@@ -19,10 +19,13 @@ source_filter = None if source == "all" else source
 only_marked = st.checkbox("Только помеченные документы", value=False)
 
 with db_connection() as conn:
-    rows = list_documents_with_mentions(conn, threshold, source=source_filter, limit=500)
-
-if only_marked:
-    rows = [row for row in rows if row.mention_count > 0]
+    rows = list_documents_with_mentions(
+        conn,
+        threshold,
+        source=source_filter,
+        limit=500,
+        only_with_mentions=only_marked,
+    )
 
 data = [
     {
