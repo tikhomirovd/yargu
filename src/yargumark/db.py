@@ -86,7 +86,6 @@ def upsert_document(connection: sqlite3.Connection, record: DocumentRecord) -> i
             published_at = excluded.published_at,
             fetched_at = excluded.fetched_at,
             source = excluded.source
-        WHERE documents.html_hash != excluded.html_hash
         """,
         (
             record.url,

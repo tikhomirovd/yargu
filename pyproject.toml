@@ -48,6 +48,9 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 [tool.ruff.lint.per-file-ignores]
 "src/yargumark/app/**/*.py" = ["RUF001", "E501"]
 "src/yargumark/marker/templates.py" = ["RUF001"]
+"src/yargumark/crawler/title.py" = ["RUF001", "RUF002", "SIM103"]
+"src/yargumark/crawler/urlnorm.py" = ["RUF002"]
+"tests/test_title.py" = ["RUF001", "RUF002"]
 
 [tool.mypy]
 strict = true
