@@ -34,3 +34,4 @@ At the end of each work session, append concise notes for:
 - NLP digest: `fetch_digest_entities` returns up to 5 short aliases per entity for the Haiku system prompt; digest order `id ASC`. CLI `--all --limit N` for batch caps.
 - Extractor: `_align_span_to_body` falls back to full-text search when windowed match fails.
 - Local DB snapshot (not in git): ~13k `uniyar` docs, 19 `demo`; entities ~843 fz255 rows + type counts; NLP runs concentrated on `documents.id` 20–29 (10 uniyar pages, injected/forbidden coverage); `mentions` total 10 in that snapshot.
+- Streamlit **Document**: dropdown defaults to documents that already have `mentions` above the sidebar threshold; checkbox expands to the full catalog (same SQL flag as News Library «только помеченные»).
