@@ -12,6 +12,7 @@ from scrapy.http.response.text import TextResponse
 from scrapy.linkextractors import LinkExtractor
 
 from yargumark.config import get_settings
+from yargumark.crawler.items import UniyarDocumentItem
 from yargumark.crawler.title import extract_article_title
 from yargumark.crawler.urlnorm import (
     CRAWL_DENY_FILE_EXTENSIONS,
@@ -19,15 +20,10 @@ from yargumark.crawler.urlnorm import (
     normalize_document_url,
     should_index_uniyar_page,
 )
-from yargumark.db import DocumentRecord, get_connection, upsert_document
+from yargumark.db import get_connection
 
-# Широкий обход как в yagu: главная + основные листинги; остальное добирает LinkExtractor.
-START_URLS = (
-    "https://www.uniyar.ac.ru/",
-    "http://www.uniyar.ac.ru/news/main1443000/?PAGEN_1=1",
-    "http://www.uniyar.ac.ru/events/?PAGEN_1=1",
-    "http://www.uniyar.ac.ru/pressroom/?PAGEN_1=1",
-)
+# Одна точка входа: главная. Остальной сайт добирается LinkExtractor в глубину.
+DEFAULT_SEED_URLS: tuple[str, ...] = ("https://www.uniyar.ac.ru/",)
 
 _UNIYAR_LINK_EXTRACTOR = LinkExtractor(
     allow_domains=["uniyar.ac.ru", "www.uniyar.ac.ru"],
@@ -46,7 +42,7 @@ def _fallback_title_from_url(url: str) -> str:
 
 
 class UniyarSpider(Spider):
-    """Обход сайта в глубину: сохраняем почти все текстовые страницы (кроме медиа/bitrix)."""
+    """Обход сайта в глубину; сохранение через Item → pipeline (как в yagu)."""
 
     name = "uniyar"
     allowed_domains = ("uniyar.ac.ru", "www.uniyar.ac.ru")
@@ -56,6 +52,7 @@ class UniyarSpider(Spider):
         only_new: str | bool = False,
         max_depth: str | int = 5,
         link_limit: str | int = 200,
+        extra_start_urls: list[str] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -70,9 +67,13 @@ class UniyarSpider(Spider):
             }
         self._max_depth = int(max_depth) if str(max_depth).isdigit() else 5
         self._link_limit = int(link_limit) if str(link_limit).isdigit() else 200
+        seeds = list(DEFAULT_SEED_URLS)
+        if extra_start_urls:
+            seeds.extend(extra_start_urls)
+        self._seed_urls = list(dict.fromkeys(seeds))
 
     def start_requests(self) -> Iterator[Request]:
-        for url in START_URLS:
+        for url in self._seed_urls:
             yield Request(url=url, callback=self.parse)
 
     def _body_text(self, response: TextResponse) -> str:
@@ -87,7 +88,7 @@ class UniyarSpider(Spider):
         fallback = " ".join(response.css("body *::text").getall()[:2000])
         return re.sub(r"\s+", " ", fallback).strip()
 
-    def parse(self, response: Response) -> Iterator[Request]:
+    def parse(self, response: Response) -> Iterator[Request | UniyarDocumentItem]:
         if not isinstance(response, TextResponse):
             return
 
@@ -102,22 +103,16 @@ class UniyarSpider(Spider):
                 title = extract_article_title(response.text, body).strip()
                 if not title:
                     title = _fallback_title_from_url(response.url)
-                settings = get_settings()
-                with get_connection(settings.db_path) as connection:
-                    upsert_document(
-                        connection,
-                        DocumentRecord(
-                            url=response.url,
-                            title=title,
-                            body=body,
-                            html_raw=response.text,
-                            published_at=response.css(
-                                "span.b-news__date-detail::text, time::attr(datetime)"
-                            ).get(default=None),
-                            source="uniyar",
-                        ),
-                    )
-                    connection.commit()
+                yield UniyarDocumentItem(
+                    url=response.url,
+                    title=title,
+                    body=body,
+                    html_raw=response.text,
+                    published_at=response.css(
+                        "span.b-news__date-detail::text, time::attr(datetime)"
+                    ).get(default=None),
+                    source="uniyar",
+                )
                 self._known_normalized_urls.add(normalized)
 
         depth = int(response.meta.get("depth", 0) or 0)
