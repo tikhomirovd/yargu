@@ -19,12 +19,12 @@ if "ui_mode" not in st.session_state:
 
 with st.sidebar:
     st.selectbox(
-        "Режим UI (порог уверенности)",
+        "Режим (порог уверенности)",
         options=["demo", "production"],
         key="ui_mode",
         help=(
-            "Demo: выше порог — меньше ложных срабатываний. "
-            "Production: ниже порог — выше полнота (recall)."
+            "В режиме demo порог выше — меньше ложных срабатываний. "
+            "В production порог ниже — выше полнота (recall)."
         ),
     )
     current_mode = str(st.session_state["ui_mode"])
@@ -33,29 +33,23 @@ with st.sidebar:
 
 st.title("YarguMark")
 st.markdown(
-    "Прототип для демонстрации: система находит в текстах страниц упоминания лиц и организаций "
-    "из официальных реестров, расставляет **юридически корректные формулировки** (плашки) и "
-    "показывает **объяснение** по каждому срабатыванию."
-)
-st.markdown(
-    "**Рекомендуемый порядок демо:**\n"
-    "1. Просмотр документа — разметка и «почему так».\n"
-    "2. Библиотека новостей — масштаб корпуса.\n"
-    "3. Статус реестров — свежесть справочника и охват.\n"
-    "4. При необходимости: песочница, обновление реестра без повторного ИИ по архиву, тестовые кейсы."
+    "Система находит в текстах упоминания лиц и организаций из официальных реестров, "
+    "расставляет **обязательные формулировки** и показывает **обоснование** по каждому срабатыванию."
 )
 
-c1, c2, c3 = st.columns(3)
+c1, c2, c3, c4 = st.columns(4)
 with c1:
-    st.page_link("pages/1_Document.py", label="Просмотр документа", icon="📄")
+    st.page_link("pages/1_Document.py", label="Документ", icon="📄")
 with c2:
     st.page_link("pages/2_News_Library.py", label="Библиотека новостей", icon="📚")
 with c3:
     st.page_link("pages/3_Registry.py", label="Статус реестров", icon="📋")
+with c4:
+    st.page_link("pages/5_Registry_Editor.py", label="Реестр и алиасы", icon="🧩")
 
-with st.expander("Масштаб и оценка стоимости LLM (ориентир для бизнеса)", expanded=False):
-    st.caption(
-        "Оценка в долларах по умолч. тарифам Haiku в `yargumark.pricing`; не официальный счёт Anthropic."
-    )
+st.page_link("pages/4_Sandbox.py", label="Песочница", icon="🧪")
+
+with st.expander("Объём корпуса и кеш LLM", expanded=False):
+    st.caption("Оценка в долларах по настройкам в `yargumark.pricing`; не счёт от Anthropic.")
     with db_connection() as conn:
         render_cost_summary(conn)

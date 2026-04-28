@@ -35,7 +35,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_entities_unique_source
 CREATE TABLE IF NOT EXISTS entity_aliases (
     entity_id INTEGER NOT NULL,
     alias TEXT NOT NULL,
-    alias_kind TEXT NOT NULL CHECK(alias_kind IN ('official', 'informal', 'transliteration', 'abbreviation')),
+    alias_kind TEXT NOT NULL CHECK(
+        alias_kind IN ('official', 'informal', 'transliteration', 'abbreviation', 'manual')
+    ),
     PRIMARY KEY (entity_id, alias),
     FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE CASCADE
 );

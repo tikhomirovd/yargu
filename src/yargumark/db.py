@@ -32,6 +32,17 @@ class EntityRecord:
     lemma_key: str
 
 
+@dataclass(frozen=True)
+class EntityOverviewRow:
+    id: int
+    canonical_name: str
+    entity_type: str
+    registry_source: str
+    registry_id: str
+    alias_count: int
+    mention_count: int
+
+
 def _read_schema(schema_path: Path) -> str:
     return schema_path.read_text(encoding="utf-8")
 
@@ -266,6 +277,212 @@ def try_insert_enriched_alias(
             (entity_id, lemma_key),
         )
     return True
+
+
+def ensure_entity_aliases_supports_manual(connection: sqlite3.Connection) -> None:
+    """Recreate `entity_aliases` if the table predates the `manual` alias_kind value."""
+    cursor = connection.cursor()
+    cursor.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='entity_aliases'"
+    )
+    row = cursor.fetchone()
+    if row is None or row[0] is None:
+        return
+    ddl = str(row[0])
+    if "manual" in ddl:
+        return
+    connection.executescript(
+        """
+        PRAGMA foreign_keys=OFF;
+        BEGIN;
+        CREATE TABLE entity_aliases_new (
+            entity_id INTEGER NOT NULL,
+            alias TEXT NOT NULL,
+            alias_kind TEXT NOT NULL CHECK(
+                alias_kind IN (
+                    'official', 'informal', 'transliteration', 'abbreviation', 'manual'
+                )
+            ),
+            PRIMARY KEY (entity_id, alias),
+            FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE CASCADE
+        );
+        INSERT INTO entity_aliases_new SELECT * FROM entity_aliases;
+        DROP TABLE entity_aliases;
+        ALTER TABLE entity_aliases_new RENAME TO entity_aliases;
+        COMMIT;
+        PRAGMA foreign_keys=ON;
+        """
+    )
+
+
+def rebuild_entity_lemmas(connection: sqlite3.Connection, entity_id: int) -> None:
+    cursor = connection.cursor()
+    cursor.execute("SELECT canonical_name FROM entities WHERE id = ?", (entity_id,))
+    row = cursor.fetchone()
+    if row is None:
+        return
+    canonical = normalize_name(str(row[0]))
+    cursor.execute("DELETE FROM entity_lemmas WHERE entity_id = ?", (entity_id,))
+    canon_lemma = to_lemma_key(canonical)
+    if canon_lemma:
+        cursor.execute(
+            """
+            INSERT INTO entity_lemmas (entity_id, lemma_key)
+            VALUES (?, ?)
+            ON CONFLICT(entity_id, lemma_key) DO NOTHING
+            """,
+            (entity_id, canon_lemma),
+        )
+    cursor.execute(
+        "SELECT alias FROM entity_aliases WHERE entity_id = ?",
+        (entity_id,),
+    )
+    for (alias_row,) in cursor.fetchall():
+        nk = to_lemma_key(normalize_name(str(alias_row)))
+        if nk:
+            cursor.execute(
+                """
+                INSERT INTO entity_lemmas (entity_id, lemma_key)
+                VALUES (?, ?)
+                ON CONFLICT(entity_id, lemma_key) DO NOTHING
+                """,
+                (entity_id, nk),
+            )
+
+
+def fetch_entity_aliases_with_kind(
+    connection: sqlite3.Connection,
+    entity_id: int,
+) -> list[tuple[str, str]]:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT alias, alias_kind FROM entity_aliases
+        WHERE entity_id = ?
+        ORDER BY alias_kind ASC, alias ASC
+        """,
+        (entity_id,),
+    )
+    return [(str(r[0]), str(r[1])) for r in cursor.fetchall()]
+
+
+def delete_entity_alias(connection: sqlite3.Connection, entity_id: int, alias: str) -> bool:
+    normalized = normalize_name(alias)
+    if not normalized:
+        return False
+    cursor = connection.cursor()
+    cursor.execute(
+        "DELETE FROM entity_aliases WHERE entity_id = ? AND alias = ?",
+        (entity_id, normalized),
+    )
+    if cursor.rowcount == 0:
+        return False
+    rebuild_entity_lemmas(connection, entity_id)
+    return True
+
+
+def count_entities_for_overview(
+    connection: sqlite3.Connection,
+    *,
+    search: str | None,
+    entity_type: str | None,
+) -> int:
+    where_parts = ["e.is_active = 1"]
+    params: list[object] = []
+    if entity_type:
+        where_parts.append("e.type = ?")
+        params.append(entity_type)
+    if search and search.strip():
+        pat = f"%{search.strip()}%"
+        where_parts.append(
+            "(e.canonical_name LIKE ? OR e.registry_id LIKE ? OR e.registry_source LIKE ?)"
+        )
+        params.extend([pat, pat, pat])
+    where_sql = " AND ".join(where_parts)
+    cursor = connection.cursor()
+    cursor.execute(
+        f"SELECT COUNT(*) FROM entities e WHERE {where_sql}",
+        tuple(params),
+    )
+    row = cursor.fetchone()
+    return int(row[0]) if row is not None else 0
+
+
+def fetch_entity_brief(
+    connection: sqlite3.Connection,
+    entity_id: int,
+) -> tuple[str, str] | None:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT canonical_name, type FROM entities WHERE id = ? AND is_active = 1
+        """,
+        (entity_id,),
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    return (str(row[0]), str(row[1]))
+
+
+def list_entities_overview(
+    connection: sqlite3.Connection,
+    *,
+    min_confidence: float,
+    search: str | None,
+    entity_type: str | None,
+    limit: int,
+    offset: int,
+) -> list[EntityOverviewRow]:
+    where_parts = ["e.is_active = 1"]
+    params: list[object] = [min_confidence]
+    if entity_type:
+        where_parts.append("e.type = ?")
+        params.append(entity_type)
+    if search and search.strip():
+        pat = f"%{search.strip()}%"
+        where_parts.append(
+            "(e.canonical_name LIKE ? OR e.registry_id LIKE ? OR e.registry_source LIKE ?)"
+        )
+        params.extend([pat, pat, pat])
+    where_sql = " AND ".join(where_parts)
+    params.extend([limit, offset])
+    cursor = connection.cursor()
+    cursor.execute(
+        f"""
+        SELECT
+            e.id,
+            e.canonical_name,
+            e.type,
+            e.registry_source,
+            e.registry_id,
+            (SELECT COUNT(*) FROM entity_aliases ea WHERE ea.entity_id = e.id) AS alias_count,
+            (
+                SELECT COUNT(*)
+                FROM mentions m
+                WHERE m.entity_id = e.id AND m.confidence >= ?
+            ) AS mention_count
+        FROM entities e
+        WHERE {where_sql}
+        ORDER BY e.canonical_name COLLATE NOCASE
+        LIMIT ? OFFSET ?
+        """,
+        tuple(params),
+    )
+    out: list[EntityOverviewRow] = []
+    for r in cursor.fetchall():
+        out.append(
+            EntityOverviewRow(
+                id=int(r[0]),
+                canonical_name=str(r[1]),
+                entity_type=str(r[2]),
+                registry_source=str(r[3]),
+                registry_id=str(r[4]),
+                alias_count=int(r[5]),
+                mention_count=int(r[6]),
+            )
+        )
+    return out
 
 
 @dataclass(frozen=True)
@@ -686,7 +903,9 @@ def compute_mentions_hash(
     mentions_part = "|".join(
         f"{int(r[0])}:{int(r[1])}:{float(r[2]):.6f}" for r in cursor.fetchall()
     )
-    return hashlib.sha256(f"{body_hash}::{mentions_part}".encode()).hexdigest()
+    # Bump when legal/badge HTML templates change so `render_cache` is not reused.
+    markup_v = "2"
+    return hashlib.sha256(f"{markup_v}:{body_hash}::{mentions_part}".encode()).hexdigest()
 
 
 def upsert_render_cache(connection: sqlite3.Connection, row: RenderCacheRow) -> None:

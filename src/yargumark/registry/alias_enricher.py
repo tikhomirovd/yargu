@@ -57,6 +57,11 @@ def _alias_kind_for(surface: str) -> str:
     return "informal"
 
 
+def classify_alias_kind(surface: str) -> str:
+    """Return alias_kind string suitable for `entity_aliases.alias_kind`."""
+    return _alias_kind_for(surface)
+
+
 def _extract_usage(response: object) -> tuple[int, int, int]:
     usage = getattr(response, "usage", None)
     if usage is None:

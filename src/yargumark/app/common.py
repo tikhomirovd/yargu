@@ -43,6 +43,18 @@ _YM_STYLES_MARKDOWN = """
     font-size: 0.9rem;
     opacity: 0.95;
   }
+  [data-testid="stDataFrame"],
+  [data-testid="stTable"] {
+    background-color: color-mix(in srgb, var(--background-color, #fff) 100%, transparent) !important;
+    color: inherit !important;
+    opacity: 1 !important;
+    border: 1px solid rgba(120, 120, 120, 0.35);
+    border-radius: 0.35rem;
+  }
+  [data-testid="stDataFrame"] [role="grid"],
+  [data-testid="stDataFrame"] .glide-data-grid {
+    opacity: 1 !important;
+  }
 </style>
 """
 
@@ -67,7 +79,7 @@ def current_ui_mode() -> str:
 
 
 def render_cost_summary(connection: sqlite3.Connection) -> None:
-    """Блок «масштаб и оценка стоимости LLM» для главной и при необходимости других страниц."""
+    """Сводка по объёму корпуса и строкам кеша LLM."""
     counts = count_documents_by_source(connection)
     corpus = rollup_llm_cache_for_document_bodies(connection)
     all_cache = rollup_llm_cache_all(connection)
@@ -75,10 +87,9 @@ def render_cost_summary(connection: sqlite3.Connection) -> None:
     other_in = max(0, all_cache.input_tokens - corpus.input_tokens)
     other_out = max(0, all_cache.output_tokens - corpus.output_tokens)
 
-    parts = [f"**Всего страниц в базе:** {counts.total}"]
+    st.markdown(f"**Документов в базе:** {counts.total}")
     for src, n in sorted(counts.by_source.items()):
-        parts.append(f"- `{src}`: {n}")
-    st.markdown("\n".join(parts))
+        st.markdown(f"- `{src}`: {n}")
 
     denom = corpus.row_count if corpus.row_count > 0 else 0
     avg_in = corpus.input_tokens / denom if denom else 0
@@ -86,36 +97,18 @@ def render_cost_summary(connection: sqlite3.Connection) -> None:
     avg_usd = estimate_llm_usd(int(avg_in), int(avg_out))
     total_corpus_usd = estimate_llm_usd(corpus.input_tokens, corpus.output_tokens)
 
-    st.markdown(
-        "**Разметка текстов страниц** "
-        "(основной вызов Haiku по содержимому, данные из кеша запросов):"
-    )
+    st.markdown("**Кеш разметки текстов** (основной вызов Haiku по телу страницы):")
     if corpus.row_count == 0:
-        st.caption(
-            "Пока нет строк кеша, совпадающих с текстами документов — запустите NLP по страницам."
-        )
+        st.caption("Записей нет — обработайте документы через NLP.")
     else:
         st.markdown(
-            f"- Уникальных текстов с кешем: **{corpus.row_count}** · "
-            f"сумма input+output токенов: **{corpus.input_tokens + corpus.output_tokens:,}** "
-            f"(оценка **~${total_corpus_usd:.2f}**)\n"
-            f"- В среднем на один такой текст: **~{avg_in + avg_out:,.0f}** токенов "
-            f"(**~${avg_usd:.4f}** — ориентир; тарифы меняются)."
+            f"- Записей: **{corpus.row_count}**, токены: "
+            f"**{corpus.input_tokens + corpus.output_tokens:,}**, "
+            f"оценка **~${total_corpus_usd:.2f}** · в среднем на документ **~${avg_usd:.4f}**"
         )
 
-    st.markdown(
-        "**Прочие вызовы в кеше** (обогащение алиасов и др., ключ не совпадает с телом страницы):"
-    )
+    st.markdown("**Прочий кеш** (обогащение алиасов и т.п.):")
     st.caption(
-        f"Строк в кеше: **{other_rows}** · input+output токенов: **{other_in + other_out:,}** "
-        f"(~**${estimate_llm_usd(other_in, other_out):.2f}**)."
-    )
-    st.caption(
-        "Подтянуть официальный реестр в БД и переиндексировать архив без повторного чтения текстов "
-        "моделью — **без стоимости LLM**. Отдельный вызов Haiku на обогащение синонимов для одной "
-        "организации — обычно один короткий запрос (см. прочие строки кеша после запуска enricher)."
-    )
-    st.caption(
-        "Дополнительные context-check вызовы для персон могут не входить в «одну строку» кеша на "
-        "страницу — при необходимости уточняйте по логам API."
+        f"Записей: **{other_rows}**, токены: **{other_in + other_out:,}**, "
+        f"оценка **~${estimate_llm_usd(other_in, other_out):.2f}**."
     )

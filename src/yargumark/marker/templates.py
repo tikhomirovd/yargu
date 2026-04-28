@@ -11,7 +11,7 @@ def inline_label_html(entity_type: str, _canonical_name: str) -> str:
     """Return HTML fragment placed immediately after the surface form (name already in text)."""
     if entity_type == "foreign_agent":
         return (
-            '<span class="ym-badge ym-foreign_agent"> (выполняет функции иностранного агента)'
+            '<span class="ym-badge ym-foreign_agent"> (признан в РФ иностранным агентом)'
             "<sup>*</sup></span>"
         )
     if entity_type == "undesirable_org":
@@ -36,9 +36,8 @@ def inline_label_html(entity_type: str, _canonical_name: str) -> str:
 def foreign_agent_footnote_html(canonical_name: str) -> str:
     safe = escape_label_name(canonical_name)
     return (
-        f"<p><sup>*</sup> Настоящий материал произведён/распространён иностранным агентом "
-        f"{safe}.</p>"
-        f"<p>Содержание доступно только для аудитории 18+.</p>"
+        "<p><sup>*</sup> Настоящий материал создан и (или) распространён иностранным агентом "
+        f"{safe} либо касается его деятельности.</p>"
     )
 
 

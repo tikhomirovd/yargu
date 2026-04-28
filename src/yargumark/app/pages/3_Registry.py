@@ -17,7 +17,7 @@ from yargumark.db import (
 )
 from yargumark.registry.sync import sync_registry
 
-st.set_page_config(page_title="Registry", layout="wide")
+st.set_page_config(page_title="Статус реестров", layout="wide")
 inject_global_styles()
 
 if "registry_sync_status" in st.session_state:
@@ -33,15 +33,8 @@ threshold = ui_threshold(settings, mode)
 
 st.title("Статус реестров")
 st.markdown(
-    "**Зачем эта страница:** здесь видно, какой **справочник обязательных сущностей** загружен в систему "
-    "и **насколько он свежий**. Реестры на стороне государства обновляются регулярно — без даты синхронизации "
-    "нельзя честно отвечать на вопрос про актуальность данных.\n\n"
-    "**Три разных процесса (важно для демо):**\n"
-    "- **Обновить реестры** ниже — это загрузка **официальных и файловых** данных в базу (ETL), **без вызова LLM** "
-    "и без генерации «разговорных» синонимов.\n"
-    "- **Обогащение алиасов через ИИ** (отдельный сценарий, скрипт enricher) — короткий вызов Haiku **на сущность**, "
-    "если нужны народные формы вроде «инста».\n"
-    "- **Алиасы вручную** при добавлении записи — без стоимости LLM."
+    "Здесь видно, **какой справочник загружен** и **когда он последний раз обновлялся**. "
+    "Кнопка ниже подтягивает официальные данные в базу **без вызова LLM**."
 )
 
 with db_connection() as conn:
@@ -67,22 +60,19 @@ rows_registry = [
 ]
 st.dataframe(rows_registry, use_container_width=True, hide_index=True)
 
-st.subheader(f"Упоминания в текстах при текущем пороге UI ({mode}, ≥ {threshold:.2f})")
+st.subheader(f"Упоминания в текстах (режим {mode}, порог ≥ {threshold:.2f})")
 if not mention_by_type:
     st.caption(
         "Пока нет упоминаний выше порога — обработайте документы через NLP или смените режим."
     )
 else:
     rows_m = [
-        {"Тип": t, "Число упоминаний": n}
+        {"Тип": t, "Упоминаний": n}
         for t, n in sorted(mention_by_type.items(), key=lambda item: item[0])
     ]
     st.dataframe(rows_m, use_container_width=True, hide_index=True)
-    st.caption(
-        "Показывает, сколько раз справочник «сработал» в уже размеченных текстах при выбранном пороге."
-    )
 
-with st.expander("Масштаб и оценка стоимости LLM"), db_connection() as conn:
+with st.expander("Объём корпуса и кеш LLM", expanded=False), db_connection() as conn:
     render_cost_summary(conn)
 
 with st.expander("Команда для администратора (терминал)"):

@@ -89,7 +89,7 @@ with left:
     st.subheader("Оригинал")
     st.text(detail.body)
 with right:
-    st.subheader("С плашками")
+    st.subheader("Размеченный текст")
     st.markdown(marked_html, unsafe_allow_html=True)
 
 st.subheader("Почему так")
