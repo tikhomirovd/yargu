@@ -14,17 +14,20 @@ logger = logging.getLogger(__name__)
 
 
 class YarguDocumentPipeline:
-    """Write UniyarDocumentItem rows to SQLite; one connection per crawl (yagu-style)."""
+    """Write UniyarDocumentItem rows to SQLite; one connection per crawl (yagu-style).
 
-    def open_spider(self, _spider: scrapy.Spider) -> None:
+    Scrapy 2.13+ passes spider only if the callback argument is exactly named ``spider``.
+    """
+
+    def open_spider(self, spider: scrapy.Spider) -> None:
         settings = get_settings()
         self._connection = get_connection(settings.db_path)
 
-    def close_spider(self, _spider: scrapy.Spider) -> None:
+    def close_spider(self, spider: scrapy.Spider) -> None:
         if hasattr(self, "_connection"):
             self._connection.close()
 
-    def process_item(self, item: Any, _spider: scrapy.Spider) -> Any:
+    def process_item(self, item: Any, spider: scrapy.Spider) -> Any:
         if not isinstance(item, UniyarDocumentItem):
             return item
         fields: dict[str, Any] = dict(ItemAdapter(item))
