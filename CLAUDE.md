@@ -17,3 +17,8 @@ At the end of each work session, append concise notes for:
 - Primary delivery track: Plan A (Demo-first).
 - Fallback delivery track: Plan B on recall-gate failure.
 - Dual-threshold policy: strict demo mode, recall-first production mode.
+
+## 2026-04-28
+- Git repository initialized on branch `main`; initial commit includes crawler, registry sync, and NLP pipeline skeleton.
+- `fz255` remote JSON URL used in code returned 404; sync falls back to `data/registries/fallback-entities.json` until a stable dump URL is confirmed.
+- NLP: `yargumark-process-doc --doc-id N` runs Haiku extraction + matcher + optional PERSON context check; requires `ANTHROPIC_API_KEY`.
