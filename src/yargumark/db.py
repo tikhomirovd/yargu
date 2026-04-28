@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from yargumark.config import get_settings
+from yargumark.registry.lemmatize import to_lemma_key
+from yargumark.registry.normalize import normalize_name
 
 
 @dataclass(frozen=True)
@@ -99,6 +101,18 @@ def upsert_document(connection: sqlite3.Connection, record: DocumentRecord) -> i
     return int(row[0])
 
 
+def get_all_document_ids(connection: sqlite3.Connection, source: str | None = None) -> list[int]:
+    cursor = connection.cursor()
+    if source is not None:
+        cursor.execute(
+            "SELECT id FROM documents WHERE source = ? ORDER BY id ASC",
+            (source,),
+        )
+    else:
+        cursor.execute("SELECT id FROM documents ORDER BY id ASC")
+    return [int(row[0]) for row in cursor.fetchall()]
+
+
 def start_registry_sync(connection: sqlite3.Connection, source: str) -> int:
     started_at = datetime.now(UTC).isoformat()
     cursor = connection.cursor()
@@ -173,7 +187,10 @@ def upsert_entity(connection: sqlite3.Connection, record: EntityRecord) -> bool:
             f"Failed to fetch entity after upsert: {record.registry_source}:{record.registry_id}"
         )
     entity_id = int(row[0])
-    cursor.execute("DELETE FROM entity_aliases WHERE entity_id = ?", (entity_id,))
+    cursor.execute(
+        "DELETE FROM entity_aliases WHERE entity_id = ? AND alias_kind = 'official'",
+        (entity_id,),
+    )
     cursor.executemany(
         """
         INSERT INTO entity_aliases (entity_id, alias, alias_kind)
@@ -192,6 +209,63 @@ def upsert_entity(connection: sqlite3.Connection, record: EntityRecord) -> bool:
         (entity_id, record.lemma_key),
     )
     return not existed
+
+
+def fetch_entity_aliases(connection: sqlite3.Connection, entity_id: int) -> list[str]:
+    cursor = connection.cursor()
+    cursor.execute(
+        "SELECT alias FROM entity_aliases WHERE entity_id = ? ORDER BY alias ASC",
+        (entity_id,),
+    )
+    return [str(row[0]) for row in cursor.fetchall()]
+
+
+def fetch_entities_for_alias_enrichment(
+    connection: sqlite3.Connection,
+) -> list[tuple[int, str, str]]:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT id, canonical_name, type
+        FROM entities
+        WHERE is_active = 1
+        ORDER BY id ASC
+        """
+    )
+    return [(int(row[0]), str(row[1]), str(row[2])) for row in cursor.fetchall()]
+
+
+def try_insert_enriched_alias(
+    connection: sqlite3.Connection,
+    entity_id: int,
+    alias: str,
+    alias_kind: str,
+) -> bool:
+    normalized = normalize_name(alias)
+    if not normalized:
+        return False
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        INSERT INTO entity_aliases (entity_id, alias, alias_kind)
+        VALUES (?, ?, ?)
+        ON CONFLICT(entity_id, alias) DO NOTHING
+        """,
+        (entity_id, normalized, alias_kind),
+    )
+    if cursor.rowcount == 0:
+        return False
+    lemma_key = to_lemma_key(normalized)
+    if lemma_key:
+        cursor.execute(
+            """
+            INSERT INTO entity_lemmas (entity_id, lemma_key)
+            VALUES (?, ?)
+            ON CONFLICT(entity_id, lemma_key) DO NOTHING
+            """,
+            (entity_id, lemma_key),
+        )
+    return True
 
 
 @dataclass(frozen=True)

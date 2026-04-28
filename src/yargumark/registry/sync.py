@@ -14,6 +14,7 @@ from yargumark.registry.lemmatize import to_lemma_key
 from yargumark.registry.normalize import normalize_name
 from yargumark.registry.sources import (
     load_fz255_foreign_agents,
+    load_fz255_undesirable_orgs,
     load_local_registry_snapshots,
 )
 
@@ -26,6 +27,7 @@ def sync_registry() -> None:
         entities_updated = 0
         try:
             entities = load_fz255_foreign_agents()
+            entities.extend(load_fz255_undesirable_orgs())
             entities.extend(load_local_registry_snapshots(Path("data/registries")))
             for entity in entities:
                 aliases = [

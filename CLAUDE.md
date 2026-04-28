@@ -20,7 +20,7 @@ At the end of each work session, append concise notes for:
 
 ## 2026-04-28
 - Git repository initialized on branch `main`; initial commit includes crawler, registry sync, and NLP pipeline skeleton.
-- `fz255` remote JSON URL used in code returned 404; sync falls back to `data/registries/fallback-entities.json` until a stable dump URL is confirmed.
+- `fz255` registry JSON: `foreign-agents` and `undesirable-organizations` repos on GitHub (raw `registry.json`); inactive rows filtered via empty `dateOut`. Numeric ids namespaced as `registry_id` `agents/{id}` and `undesirable/{id}` under `registry_source=fz255` to avoid collisions. Live row counts drift over time (not guaranteed 866+188).
 - NLP: `yargumark-process-doc --doc-id N` runs Haiku extraction + matcher + optional PERSON context check; requires `ANTHROPIC_API_KEY`.
 - UI: Streamlit entry `src/yargumark/app/main.py` + pages under `src/yargumark/app/pages/`; sidebar `demo|production` maps to confidence thresholds via `ui_threshold`.
 - Marker: legal labels in `marker/templates.py`; HTML assembly in `marker/markup.py` with footnotes for `foreign_agent` and `terrorist_extremist`.
