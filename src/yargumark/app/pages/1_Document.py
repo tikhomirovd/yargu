@@ -13,13 +13,10 @@ from yargumark.db import (
 )
 from yargumark.marker.render import render_document_html
 
-st.set_page_config(page_title="Document", layout="wide")
+st.set_page_config(page_title="Документ", layout="wide")
 inject_global_styles()
-st.title("Просмотр документа")
-st.caption(
-    "Зачем: основной экран продукта — исходный текст рядом с версией с плашками и объяснениями. "
-    "Когда показывать: в начале демо."
-)
+st.title("Документ")
+st.caption("Слева — оригинал, справа — текст с правовыми плашками.")
 
 settings = app_settings()
 mode = current_ui_mode()
@@ -28,8 +25,10 @@ threshold = ui_threshold(settings, mode)
 show_all_docs = st.checkbox(
     "Показать все документы",
     value=False,
-    help="Если выключено — только страницы, где найдена хотя бы одна сущность из реестра "
-    "(уверенность не ниже порога текущего режима в боковой панели).",
+    help=(
+        "Без галки видны только страницы, где найдена хотя бы одна сущность из реестра "
+        "при текущем пороге уверенности."
+    ),
 )
 
 with db_connection() as conn:
@@ -43,15 +42,28 @@ with db_connection() as conn:
 if not catalog:
     if not show_all_docs:
         st.warning(
-            "Ни одного документа, где реестр сработал при текущем пороге. "
-            "Включите «Показать все документы», прогоните NLP по текстам "
-            "или смените режим/порог в боковой панели."
+            "Нет документов, в которых сработал реестр при текущем пороге. "
+            "Включите «Показать все документы» или смените режим в боковой панели."
         )
     else:
-        st.warning("Нет документов в базе. Запустите краулер или scripts/seed_demo.py.")
+        st.warning("В базе нет документов. Запустите краулер или сидер.")
     st.stop()
 
-options = {f"{row.id} — {row.title[:80]}": row.id for row in catalog}
+
+def _label(title: str, published_at: str | None) -> str:
+    base = (title or "").strip() or "Без названия"
+    if published_at:
+        return f"{base}  ·  {published_at}"
+    return base
+
+
+options: dict[str, int] = {}
+for row in catalog:
+    label = _label(row.title, row.published_at)
+    if label in options:
+        label = f"{label}  ({row.id})"
+    options[label] = row.id
+
 choice = st.selectbox("Документ", options=list(options.keys()))
 doc_id = options[choice]
 
@@ -64,17 +76,25 @@ if detail is None:
     st.error("Документ не найден.")
     st.stop()
 
+article_title = (detail.title or "").strip() or "Без названия"
+st.markdown(f"### [{article_title}]({detail.url})")
+meta_parts: list[str] = []
+if detail.published_at:
+    meta_parts.append(f"Опубликовано: {detail.published_at}")
+meta_parts.append(f"Источник: {detail.source}")
+st.caption(" · ".join(meta_parts))
+
 left, right = st.columns(2)
 with left:
     st.subheader("Оригинал")
     st.text(detail.body)
 with right:
-    st.subheader("Размеченный текст")
+    st.subheader("С плашками")
     st.markdown(marked_html, unsafe_allow_html=True)
 
 st.subheader("Почему так")
 if not mentions:
-    st.caption("Нет упоминаний выше порога для текущего режима.")
+    st.caption("При текущем пороге сработавших упоминаний нет.")
 for mention in mentions:
     st.markdown(
         "- "
