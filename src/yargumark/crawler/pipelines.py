@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import scrapy
 from itemadapter import ItemAdapter
 
 from yargumark.config import get_settings
 from yargumark.crawler.items import UniyarDocumentItem
 from yargumark.db import DocumentRecord, get_connection, upsert_document
+
+if TYPE_CHECKING:
+    from scrapy.crawler import Crawler
 
 logger = logging.getLogger(__name__)
 
@@ -16,18 +18,27 @@ logger = logging.getLogger(__name__)
 class YarguDocumentPipeline:
     """Write UniyarDocumentItem rows to SQLite; one connection per crawl (yagu-style).
 
-    Scrapy 2.13+ passes spider only if the callback argument is exactly named ``spider``.
+    Scrapy 2.13+: hook methods omit ``spider``; use :meth:`from_crawler` / ``crawler`` if needed.
     """
 
-    def open_spider(self, spider: scrapy.Spider) -> None:
+    def __init__(self) -> None:
+        self.crawler: Crawler | None = None
+
+    @classmethod
+    def from_crawler(cls, crawler: Crawler) -> YarguDocumentPipeline:
+        pipe = cls()
+        pipe.crawler = crawler
+        return pipe
+
+    def open_spider(self) -> None:
         settings = get_settings()
         self._connection = get_connection(settings.db_path)
 
-    def close_spider(self, spider: scrapy.Spider) -> None:
+    def close_spider(self) -> None:
         if hasattr(self, "_connection"):
             self._connection.close()
 
-    def process_item(self, item: Any, spider: scrapy.Spider) -> Any:
+    def process_item(self, item: Any) -> Any:
         if not isinstance(item, UniyarDocumentItem):
             return item
         fields: dict[str, Any] = dict(ItemAdapter(item))

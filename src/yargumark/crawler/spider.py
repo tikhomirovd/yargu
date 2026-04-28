@@ -6,8 +6,8 @@ from typing import Any
 from urllib.parse import urlparse
 
 import trafilatura
-from scrapy import Request, Spider
-from scrapy.http import Response
+from scrapy import Spider
+from scrapy.http import Request, Response
 from scrapy.http.response.text import TextResponse
 from scrapy.linkextractors import LinkExtractor
 
@@ -70,11 +70,7 @@ class UniyarSpider(Spider):
         seeds = list(DEFAULT_SEED_URLS)
         if extra_start_urls:
             seeds.extend(extra_start_urls)
-        self._seed_urls = list(dict.fromkeys(seeds))
-
-    def start_requests(self) -> Iterator[Request]:
-        for url in self._seed_urls:
-            yield Request(url=url, callback=self.parse)
+        self.start_urls = list(dict.fromkeys(seeds))
 
     def _body_text(self, response: TextResponse) -> str:
         extracted = trafilatura.extract(
