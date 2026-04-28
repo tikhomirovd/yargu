@@ -646,3 +646,77 @@ def latest_registry_sync_finished_at(connection: sqlite3.Connection) -> str | No
     if row is None or row[0] is None:
         return None
     return str(row[0])
+
+
+@dataclass(frozen=True)
+class ExtractedSpanRow:
+    id: int
+    doc_id: int
+    start_offset: int
+    end_offset: int
+    surface_form: str
+    normalized: str
+    lemma_key: str
+    span_type: str
+    extractor: str
+
+
+def fetch_all_extracted_spans(connection: sqlite3.Connection) -> list[ExtractedSpanRow]:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT id, doc_id, start_offset, end_offset, surface_form, normalized,
+               lemma_key, span_type, extractor
+        FROM extracted_spans
+        ORDER BY doc_id ASC, id ASC
+        """
+    )
+    return [
+        ExtractedSpanRow(
+            id=int(r[0]),
+            doc_id=int(r[1]),
+            start_offset=int(r[2]),
+            end_offset=int(r[3]),
+            surface_form=str(r[4]),
+            normalized=str(r[5]),
+            lemma_key=str(r[6]),
+            span_type=str(r[7]),
+            extractor=str(r[8]),
+        )
+        for r in cursor.fetchall()
+    ]
+
+
+def delete_all_mentions(connection: sqlite3.Connection) -> None:
+    connection.execute("DELETE FROM mentions")
+
+
+def clear_render_cache(connection: sqlite3.Connection) -> None:
+    connection.execute("DELETE FROM render_cache")
+
+
+def get_document_id_by_url(connection: sqlite3.Connection, url: str) -> int | None:
+    cursor = connection.cursor()
+    cursor.execute("SELECT id FROM documents WHERE url = ?", (url,))
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    return int(row[0])
+
+
+def fetch_mention_surfaces(
+    connection: sqlite3.Connection,
+    doc_id: int,
+    min_confidence: float,
+) -> list[str]:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT surface_form
+        FROM mentions
+        WHERE doc_id = ? AND confidence >= ?
+        ORDER BY start_offset ASC
+        """,
+        (doc_id, min_confidence),
+    )
+    return [str(r[0]) for r in cursor.fetchall()]

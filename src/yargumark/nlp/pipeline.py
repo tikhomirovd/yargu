@@ -19,6 +19,7 @@ from yargumark.db import (
     insert_mention,
     upsert_llm_cache,
 )
+from yargumark.nlp.confidence_rules import build_reasoning, finalize_confidence
 from yargumark.nlp.context_check import run_context_check
 from yargumark.nlp.extractor import (
     ExtractionResult,
@@ -27,7 +28,7 @@ from yargumark.nlp.extractor import (
 )
 from yargumark.nlp.llm_cache import text_sha256
 from yargumark.nlp.matcher import match_span_to_entity, span_lemma_key
-from yargumark.nlp.types import LlmSpan, MatchResult
+from yargumark.nlp.types import LlmSpan
 
 
 def _entity_by_id(entities: list[EntityForMatch], entity_id: int) -> EntityForMatch | None:
@@ -62,29 +63,6 @@ def _span_to_dict(span: LlmSpan) -> dict[str, Any]:
         "confidence": span.confidence,
         "reasoning": span.reasoning,
     }
-
-
-def _finalize_confidence(span: LlmSpan, match: MatchResult) -> float:
-    has_candidate = bool(span.registry_candidate and span.registry_candidate.strip())
-    if not has_candidate:
-        if match.match_method == "lemma":
-            return 1.0
-        return 0.85
-    if match.llm_candidate_matched:
-        return max(match.confidence, span.confidence)
-    return min(span.confidence, 0.5)
-
-
-def _build_reasoning(span: LlmSpan, match: MatchResult, context_note: str | None) -> str:
-    base = span.reasoning.strip()
-    parts = [
-        base,
-        f"match_method={match.match_method}",
-        f"llm_candidate_ok={match.llm_candidate_matched}",
-    ]
-    if context_note:
-        parts.append(context_note)
-    return " ".join(part for part in parts if part)
 
 
 def process_document(doc_id: int) -> None:
@@ -141,8 +119,8 @@ def process_document(doc_id: int) -> None:
             match = match_span_to_entity(span, lemma_key, entities, settings)
             if match is None:
                 continue
-            confidence = _finalize_confidence(span, match)
-            reasoning = _build_reasoning(span, match, context_note=None)
+            confidence = finalize_confidence(span, match)
+            reasoning = build_reasoning(span, match, context_note=None)
             if (
                 span.span_type == "PER"
                 and settings.context_check_low <= confidence <= settings.context_check_high
@@ -154,7 +132,7 @@ def process_document(doc_id: int) -> None:
                 if not context.is_match:
                     continue
                 confidence = context.confidence
-                reasoning = _build_reasoning(
+                reasoning = build_reasoning(
                     span,
                     match,
                     context_note=f"context_check={context.reasoning}",

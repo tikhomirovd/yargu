@@ -29,6 +29,7 @@ yargumark-init-db = "yargumark.db:init_db"
 yargumark-crawl = "yargumark.crawler.run:run_crawler"
 yargumark-registry-sync = "yargumark.registry.cli:sync_registry_command"
 yargumark-process-doc = "yargumark.nlp.cli:process_document_cli"
+yargumark-reindex = "yargumark.index.cli:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -49,6 +49,8 @@ uv run yargumark-crawl
 uv run yargumark-process-doc --doc-id 1
 uv run python scripts/seed_demo.py
 uv run streamlit run src/yargumark/app/main.py
+uv run yargumark-reindex
+uv run python scripts/benchmark.py
 ```
 
 Static checks:

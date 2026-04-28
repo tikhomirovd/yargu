@@ -24,3 +24,5 @@ At the end of each work session, append concise notes for:
 - NLP: `yargumark-process-doc --doc-id N` runs Haiku extraction + matcher + optional PERSON context check; requires `ANTHROPIC_API_KEY`.
 - UI: Streamlit entry `src/yargumark/app/main.py` + pages under `src/yargumark/app/pages/`; sidebar `demo|production` maps to confidence thresholds via `ui_threshold`.
 - Marker: legal labels in `marker/templates.py`; HTML assembly in `marker/markup.py` with footnotes for `foreign_agent` and `terrorist_extremist`.
+- Reindex: `index/reindex.py` rebuilds `mentions` from `extracted_spans` + current registry (no LLM); clears `render_cache`. CLI: `yargumark-reindex`. Streamlit: page **Update Registry Demo**.
+- Benchmark: `scripts/benchmark.py` compares `demo/fixtures_expected.json` surfaces vs DB mentions at demo/production thresholds.
