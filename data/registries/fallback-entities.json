@@ -1,0 +1,10 @@
+[
+  {
+    "entity_type": "undesirable_org",
+    "canonical_name": "Meta Platforms Inc.",
+    "registry_source": "local_snapshot",
+    "registry_id": "meta-platforms-inc",
+    "included_at": null,
+    "aliases": ["Meta", "Instagram", "Facebook", "Инста"]
+  }
+]

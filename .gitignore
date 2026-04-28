@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.env
+data/*.db
+data/yargumark.db
+
+.cursor/
+.claude/

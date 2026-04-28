@@ -1,0 +1,50 @@
+[project]
+name = "yargumark"
+version = "0.1.0"
+description = "YarguMark MVP for legal mention marking"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.49.0",
+    "beautifulsoup4>=4.14.0",
+    "pymorphy3>=2.0.6",
+    "pydantic>=2.11.0",
+    "pydantic-settings>=2.11.0",
+    "rapidfuzz>=3.14.0",
+    "requests>=2.32.0",
+    "scrapy>=2.13.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.0",
+    "pyright>=1.1.406",
+    "pytest>=8.4.0",
+    "ruff>=0.12.0",
+]
+
+[project.scripts]
+yargumark-init-db = "yargumark.db:init_db"
+yargumark-crawl = "yargumark.crawler.run:run_crawler"
+yargumark-registry-sync = "yargumark.registry.cli:sync_registry_command"
+yargumark-process-doc = "yargumark.nlp.cli:process_document_cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+exclude = ["^tests/"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
