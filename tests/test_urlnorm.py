@@ -35,7 +35,14 @@ def test_article_url_requires_three_path_segments() -> None:
     )
 
 
-def test_faculty_news_path_not_article() -> None:
+def test_faculty_news_listing_not_article() -> None:
+    """Разводящая страница факультета без slug материала."""
     assert not is_probable_uniyar_article_url(
         "https://www.uniyar.ac.ru/faculties/economic/news/"
+    )
+
+
+def test_faculty_news_article_url() -> None:
+    assert is_probable_uniyar_article_url(
+        "https://www.uniyar.ac.ru/faculties/economic/news/zavershilsya-forum-kadry-ved/"
     )

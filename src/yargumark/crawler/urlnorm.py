@@ -57,6 +57,17 @@ def normalize_document_url(url: str) -> str:
     return clean.rstrip("/")
 
 
+def _is_faculty_news_article_path(parts: list[str]) -> bool:
+    """Новости подразделения: /faculties/<подразделение>/news/<slug>/ (не сам листинг /news/)."""
+    if len(parts) < 4 or parts[0] != "faculties":
+        return False
+    try:
+        news_idx = parts.index("news")
+    except ValueError:
+        return False
+    return news_idx < len(parts) - 1
+
+
 def is_probable_uniyar_article_url(url: str) -> bool:
     """Карточка материала: не разводящая страница и не пагинация листинга."""
     parsed = urlparse(url)
@@ -69,7 +80,9 @@ def is_probable_uniyar_article_url(url: str) -> bool:
     parts = [p for p in (parsed.path or "").strip("/").split("/") if p]
     if len(parts) < 3:
         return False
-    return parts[0] in {"news", "events", "pressroom"}
+    if parts[0] in {"news", "events", "pressroom"}:
+        return True
+    return _is_faculty_news_article_path(parts)
 
 
 def should_skip_crawl_url(url: str) -> bool:

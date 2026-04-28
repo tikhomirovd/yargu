@@ -57,12 +57,15 @@ class UniyarSpider(scrapy.Spider):
             "a[href^='/news/']::attr(href), "
             "a[href^='/events/']::attr(href), "
             "a[href^='/pressroom/']::attr(href), "
+            "a[href^='/faculties/']::attr(href), "
             "a[href^='http://www.uniyar.ac.ru/news/']::attr(href), "
             "a[href^='https://www.uniyar.ac.ru/news/']::attr(href), "
             "a[href^='http://www.uniyar.ac.ru/events/']::attr(href), "
             "a[href^='https://www.uniyar.ac.ru/events/']::attr(href), "
             "a[href^='http://www.uniyar.ac.ru/pressroom/']::attr(href), "
-            "a[href^='https://www.uniyar.ac.ru/pressroom/']::attr(href)"
+            "a[href^='https://www.uniyar.ac.ru/pressroom/']::attr(href), "
+            "a[href^='http://www.uniyar.ac.ru/faculties/']::attr(href), "
+            "a[href^='https://www.uniyar.ac.ru/faculties/']::attr(href)"
         )
         article_links = response.css(link_selector).getall()
         for href in article_links:
@@ -74,6 +77,7 @@ class UniyarSpider(scrapy.Spider):
                 path.startswith("/news/")
                 or path.startswith("/events/")
                 or path.startswith("/pressroom/")
+                or (path.startswith("/faculties/") and "/news/" in path)
             ):
                 continue
             if not is_probable_uniyar_article_url(absolute_url):
