@@ -11,15 +11,17 @@ ROBOTSTXT_OBEY = True
 
 USER_AGENT = "YarGuMarkBot/0.1 (academic; tikhomirovd00@gmail.com)"
 
-# Как в yagu scraper: вежливый темп и параллелизм 2 (меньше шанс словить 503 у CDN).
-DOWNLOAD_DELAY = 1.0
-RANDOMIZE_DOWNLOAD_DELAY = 0.3
-CONCURRENT_REQUESTS = 2
-CONCURRENT_REQUESTS_PER_DOMAIN = 2
+# Вежливый режим: 503 у CDN часто из‑за пачки запросов (robots + сиды + ретраи).
+# Один слот на домен + пауза снижают шанс словить «перегруз» при старте.
+DOWNLOAD_DELAY = 2.0
+RANDOMIZE_DOWNLOAD_DELAY = 0.5
+CONCURRENT_REQUESTS = 1
+CONCURRENT_REQUESTS_PER_DOMAIN = 1
 
 AUTOTHROTTLE_ENABLED = True
 AUTOTHROTTLE_START_DELAY = 1.0
-AUTOTHROTTLE_MAX_DELAY = 8.0
+AUTOTHROTTLE_MAX_DELAY = 12.0
+AUTOTHROTTLE_TARGET_CONCURRENCY = 0.5
 
 # Transient 503/502 on busy sites: default RETRY_TIMES=2 is often too few.
 RETRY_TIMES = 5
@@ -59,6 +61,7 @@ def scrapy_settings_dict() -> dict[str, Any]:
         "AUTOTHROTTLE_ENABLED": AUTOTHROTTLE_ENABLED,
         "AUTOTHROTTLE_START_DELAY": AUTOTHROTTLE_START_DELAY,
         "AUTOTHROTTLE_MAX_DELAY": AUTOTHROTTLE_MAX_DELAY,
+        "AUTOTHROTTLE_TARGET_CONCURRENCY": AUTOTHROTTLE_TARGET_CONCURRENCY,
         "RETRY_TIMES": RETRY_TIMES,
         "DEFAULT_REQUEST_HEADERS": DEFAULT_REQUEST_HEADERS,
         "TWISTED_REACTOR": TWISTED_REACTOR,
