@@ -5,6 +5,206 @@
     "registry_source": "local_snapshot",
     "registry_id": "meta-platforms-inc",
     "included_at": null,
-    "aliases": ["Meta", "Instagram", "Facebook", "Инста"]
+    "aliases": ["Meta", "Facebook", "Instagram", "Инста", "инстаграм", "Фейсбук", "фб"]
+  },
+  {
+    "entity_type": "foreign_agent",
+    "canonical_name": "Фонд борьбы с коррупцией",
+    "registry_source": "local_snapshot",
+    "registry_id": "fbk",
+    "included_at": null,
+    "aliases": ["ФБК", "фбк", "Anti-Corruption Foundation", "ACF", "ФБК*"]
+  },
+  {
+    "entity_type": "foreign_agent",
+    "canonical_name": "Алексей Анатольевич Навальный",
+    "registry_source": "local_snapshot",
+    "registry_id": "navalny-aa",
+    "included_at": null,
+    "aliases": ["Навальный", "Навальному", "Навальным", "А. Навальный", "Алексей Навальный"]
+  },
+  {
+    "entity_type": "foreign_agent",
+    "canonical_name": "Иван Иванович Иванов",
+    "registry_source": "local_snapshot",
+    "registry_id": "ivanov-ii-demo-twin",
+    "included_at": null,
+    "aliases": ["И. Иванов", "Иванову"]
+  },
+  {
+    "entity_type": "foreign_agent",
+    "canonical_name": "Meduza",
+    "registry_source": "local_snapshot",
+    "registry_id": "meduza",
+    "included_at": null,
+    "aliases": ["Медуза", "meduza.io", "Медузе"]
+  },
+  {
+    "entity_type": "foreign_agent",
+    "canonical_name": "Telegram Messenger Inc.",
+    "registry_source": "local_snapshot",
+    "registry_id": "telegram-inc",
+    "included_at": null,
+    "aliases": ["Telegram", "Телеграм", "телега", "TG", "тг"]
+  },
+  {
+    "entity_type": "foreign_agent",
+    "canonical_name": "Google LLC",
+    "registry_source": "local_snapshot",
+    "registry_id": "google-llc",
+    "included_at": null,
+    "aliases": ["Google", "Гугл", "гугл", "YouTube", "Ютуб", "ютуб"]
+  },
+  {
+    "entity_type": "foreign_agent",
+    "canonical_name": "Mark Elliot Zuckerberg",
+    "registry_source": "local_snapshot",
+    "registry_id": "zuckerberg-me",
+    "included_at": null,
+    "aliases": ["Цукерберг", "цукер", "Zuckerberg", "Марк Цукерберг"]
+  },
+  {
+    "entity_type": "foreign_agent",
+    "canonical_name": "Радио Свобода",
+    "registry_source": "local_snapshot",
+    "registry_id": "radio-svoboda",
+    "included_at": null,
+    "aliases": ["Радио Свободы", "РС", "Radio Liberty", "RFE/RL"]
+  },
+  {
+    "entity_type": "foreign_agent",
+    "canonical_name": "Голос Америки",
+    "registry_source": "local_snapshot",
+    "registry_id": "voice-of-america",
+    "included_at": null,
+    "aliases": ["VoA", "Voice of America", "Голосу Америки"]
+  },
+  {
+    "entity_type": "foreign_agent",
+    "canonical_name": "The Moscow Times",
+    "registry_source": "local_snapshot",
+    "registry_id": "moscow-times",
+    "included_at": null,
+    "aliases": ["Moscow Times", "Москов Таймс", "The Moscow Times"]
+  },
+  {
+    "entity_type": "foreign_agent",
+    "canonical_name": "Холод",
+    "registry_source": "local_snapshot",
+    "registry_id": "holod-media",
+    "included_at": null,
+    "aliases": ["Holod", "holod.media", "Холоду"]
+  },
+  {
+    "entity_type": "undesirable_org",
+    "canonical_name": "Open Society Foundations",
+    "registry_source": "local_snapshot",
+    "registry_id": "open-society",
+    "included_at": null,
+    "aliases": ["OSF", "Открытое общество", "Сорос", "Soros"]
+  },
+  {
+    "entity_type": "undesirable_org",
+    "canonical_name": "National Endowment for Democracy",
+    "registry_source": "local_snapshot",
+    "registry_id": "ned",
+    "included_at": null,
+    "aliases": ["NED", "Национальный фонд в поддержку демократии"]
+  },
+  {
+    "entity_type": "undesirable_org",
+    "canonical_name": "Atlantic Council",
+    "registry_source": "local_snapshot",
+    "registry_id": "atlantic-council",
+    "included_at": null,
+    "aliases": ["Атлантический совет", "Atlantic Council"]
+  },
+  {
+    "entity_type": "undesirable_org",
+    "canonical_name": "Free Russia Foundation",
+    "registry_source": "local_snapshot",
+    "registry_id": "free-russia-foundation",
+    "included_at": null,
+    "aliases": ["ФРФ", "Free Russia", "Фонду свободной России"]
+  },
+  {
+    "entity_type": "undesirable_org",
+    "canonical_name": "Bellingcat",
+    "registry_source": "local_snapshot",
+    "registry_id": "bellingcat",
+    "included_at": null,
+    "aliases": ["Беллингкэт", "Bellingcat"]
+  },
+  {
+    "entity_type": "undesirable_org",
+    "canonical_name": "Wikimedia Foundation Inc.",
+    "registry_source": "local_snapshot",
+    "registry_id": "wikimedia-foundation",
+    "included_at": null,
+    "aliases": ["Wikipedia", "Википедия", "вики", "Wikimedia"]
+  },
+  {
+    "entity_type": "terrorist_extremist",
+    "canonical_name": "Талибан",
+    "registry_source": "local_snapshot",
+    "registry_id": "taliban-demo",
+    "included_at": null,
+    "aliases": ["Taliban", "Движение Талибан", "талибы"]
+  },
+  {
+    "entity_type": "terrorist_extremist",
+    "canonical_name": "Аль-Каида",
+    "registry_source": "local_snapshot",
+    "registry_id": "al-qaida-demo",
+    "included_at": null,
+    "aliases": ["Al-Qaeda", "Аль Каида", "Аль-Каиды"]
+  },
+  {
+    "entity_type": "terrorist_extremist",
+    "canonical_name": "ИГИЛ",
+    "registry_source": "local_snapshot",
+    "registry_id": "isis-demo",
+    "included_at": null,
+    "aliases": ["ИГ", "Исламское государство", "ISIS", "Daesh"]
+  },
+  {
+    "entity_type": "terrorist_extremist",
+    "canonical_name": "УНА-УНСО",
+    "registry_source": "local_snapshot",
+    "registry_id": "una-unso-demo",
+    "included_at": null,
+    "aliases": ["УНА УНСО", "УНСО"]
+  },
+  {
+    "entity_type": "banned_by_court",
+    "canonical_name": "Jehovah's Witnesses",
+    "registry_source": "local_snapshot",
+    "registry_id": "jw-demo",
+    "included_at": null,
+    "aliases": ["Свидетели Иеговы", "Иеговисты", "Jehovah"]
+  },
+  {
+    "entity_type": "banned_by_court",
+    "canonical_name": "Scientology",
+    "registry_source": "local_snapshot",
+    "registry_id": "scientology-demo",
+    "included_at": null,
+    "aliases": ["Саентология", "Церковь саентологии", "Scientology"]
+  },
+  {
+    "entity_type": "banned_by_court",
+    "canonical_name": "National Socialist Society",
+    "registry_source": "local_snapshot",
+    "registry_id": "nso-demo",
+    "included_at": null,
+    "aliases": ["НСО", "Национал-социалистическое общество"]
+  },
+  {
+    "entity_type": "banned_by_court",
+    "canonical_name": "Artpodgotovka",
+    "registry_source": "local_snapshot",
+    "registry_id": "artpodgotovka-demo",
+    "included_at": null,
+    "aliases": ["Артподготовка", "Artpodgotovka"]
   }
 ]

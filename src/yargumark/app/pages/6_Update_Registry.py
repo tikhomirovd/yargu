@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from yargumark.app.common import app_settings, current_ui_mode, db_connection
+from yargumark.app.common import app_settings, current_ui_mode, db_connection, inject_global_styles
 from yargumark.config import ui_threshold
 from yargumark.db import EntityRecord, fetch_document_detail, upsert_entity
 from yargumark.index.reindex import reindex_mentions_from_extracted_spans
@@ -11,6 +11,7 @@ from yargumark.registry.lemmatize import to_lemma_key
 from yargumark.registry.normalize import normalize_name
 
 st.set_page_config(page_title="Update Registry Demo", layout="wide")
+inject_global_styles()
 st.title("Демо: обновление реестра без LLM")
 
 settings = app_settings()

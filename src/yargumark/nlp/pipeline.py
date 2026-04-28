@@ -79,10 +79,14 @@ def process_document(doc_id: int) -> None:
         if cached is not None:
             payload = json.loads(cached.response_json)
             spans = [_span_from_dict(item) for item in payload.get("spans", [])]
-            spans = validate_span_offsets(spans, body)
+            spans = validate_span_offsets(spans, body, settings.span_align_window)
         else:
             extraction: ExtractionResult = extract_spans_with_haiku(body, digest, settings)
-            spans = validate_span_offsets(extraction.spans, body)
+            spans = validate_span_offsets(
+                extraction.spans,
+                body,
+                settings.span_align_window,
+            )
             payload = {
                 "spans": [_span_to_dict(span) for span in spans],
                 "raw": extraction.raw_response_text,

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import streamlit as st
 
-from yargumark.app.common import app_settings, current_ui_mode, db_connection
+from yargumark.app.common import app_settings, current_ui_mode, db_connection, inject_global_styles
 from yargumark.config import ui_threshold
 from yargumark.db import list_documents_with_mentions
 
 st.set_page_config(page_title="News Library", layout="wide")
+inject_global_styles()
 st.title("Библиотека новостей")
 
 settings = app_settings()

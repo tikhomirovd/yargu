@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, cast
 
 import anthropic
@@ -117,13 +117,48 @@ def extract_spans_with_haiku(
     return ExtractionResult(spans=spans, raw_response_text=text, usage=usage)
 
 
-def validate_span_offsets(spans: list[LlmSpan], body: str) -> list[LlmSpan]:
+def _align_span_to_body(span: LlmSpan, body: str, window: int) -> LlmSpan | None:
+    if not span.surface:
+        return None
     length = len(body)
+    if (
+        0 <= span.start < span.end <= length
+        and body[span.start : span.end] == span.surface
+    ):
+        return span
+    anchor_lo = min(max(span.start, 0), length)
+    anchor_hi = min(max(span.end, span.start, 0), length)
+    lo = max(0, anchor_lo - window)
+    hi = min(length, max(anchor_hi, anchor_lo + len(span.surface)) + window)
+    segment = body[lo:hi]
+    idx = segment.find(span.surface)
+    if idx >= 0:
+        start = lo + idx
+        return replace(span, start=start, end=start + len(span.surface))
+    parts = span.surface.split()
+    if len(parts) >= 2:
+        pattern = r"\s+".join(re.escape(part) for part in parts)
+        match = re.search(pattern, segment)
+        if match is not None:
+            start = lo + match.start()
+            end = lo + match.end()
+            return replace(span, start=start, end=end)
+    return None
+
+
+def validate_span_offsets(
+    spans: list[LlmSpan],
+    body: str,
+    align_window: int = 50,
+) -> list[LlmSpan]:
     valid: list[LlmSpan] = []
     for span in spans:
-        if span.start < 0 or span.end > length or span.start >= span.end:
+        aligned = _align_span_to_body(span, body, align_window)
+        if aligned is None:
             continue
-        if body[span.start : span.end] != span.surface:
+        if aligned.start < 0 or aligned.end > len(body) or aligned.start >= aligned.end:
             continue
-        valid.append(span)
+        if body[aligned.start : aligned.end] != aligned.surface:
+            continue
+        valid.append(aligned)
     return valid

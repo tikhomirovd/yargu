@@ -1,10 +1,20 @@
 [
-  {
-    "url": "demo://fixture/neutral",
-    "expected_mention_surfaces": []
-  },
-  {
-    "url": "demo://fixture/social-alias",
-    "expected_mention_surfaces": ["Инста"]
-  }
+  {"url": "demo://fixture/01-neutral-seminar", "expected_mention_surfaces": []},
+  {"url": "demo://fixture/02-neutral-sports", "expected_mention_surfaces": []},
+  {"url": "demo://fixture/03-neutral-library", "expected_mention_surfaces": []},
+  {"url": "demo://fixture/04-neutral-lab", "expected_mention_surfaces": []},
+  {"url": "demo://fixture/05-neutral-graduation", "expected_mention_surfaces": []},
+  {"url": "demo://fixture/06-insta-alias", "expected_mention_surfaces": ["Инста"]},
+  {"url": "demo://fixture/07-telegram-alias", "expected_mention_surfaces": ["телега"]},
+  {"url": "demo://fixture/08-zucker-alias", "expected_mention_surfaces": ["цукер"]},
+  {"url": "demo://fixture/09-fbk-abbr", "expected_mention_surfaces": ["ФБК"]},
+  {"url": "demo://fixture/10-navalny-case", "expected_mention_surfaces": ["Навальному"]},
+  {"url": "demo://fixture/11-meta-mask", "expected_mention_surfaces": ["Мет*"]},
+  {"url": "demo://fixture/12-google-youtube", "expected_mention_surfaces": ["ютуб"]},
+  {"url": "demo://fixture/13-wiki-alias", "expected_mention_surfaces": ["вики"]},
+  {"url": "demo://fixture/14-meduza-case", "expected_mention_surfaces": ["Медузе"]},
+  {"url": "demo://fixture/15-radio-liberty", "expected_mention_surfaces": ["Радио Свободы"]},
+  {"url": "demo://fixture/16-twin-surname", "expected_mention_surfaces": []},
+  {"url": "demo://fixture/17-twin-smith", "expected_mention_surfaces": []},
+  {"url": "demo://fixture/18-isis-historical", "expected_mention_surfaces": ["ИГИЛ"]}
 ]

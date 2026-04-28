@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     context_check_low: float = Field(default=0.6, alias="CONTEXT_CHECK_LOW")
     context_check_high: float = Field(default=0.9, alias="CONTEXT_CHECK_HIGH")
     fuzzy_min_score: int = Field(default=88, alias="FUZZY_MIN_SCORE")
+    span_align_window: int = Field(default=50, alias="SPAN_ALIGN_WINDOW")
 
 
 def get_settings() -> Settings:

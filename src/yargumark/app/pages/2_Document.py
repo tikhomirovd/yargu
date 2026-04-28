@@ -4,7 +4,7 @@ import html
 
 import streamlit as st
 
-from yargumark.app.common import app_settings, current_ui_mode, db_connection
+from yargumark.app.common import app_settings, current_ui_mode, db_connection, inject_global_styles
 from yargumark.config import ui_threshold
 from yargumark.db import (
     fetch_document_detail,
@@ -14,6 +14,7 @@ from yargumark.db import (
 from yargumark.marker.render import render_document_html
 
 st.set_page_config(page_title="Document", layout="wide")
+inject_global_styles()
 st.title("Просмотр документа")
 
 settings = app_settings()

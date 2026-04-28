@@ -4,13 +4,14 @@ import html
 
 import streamlit as st
 
-from yargumark.app.common import app_settings, current_ui_mode, db_connection
+from yargumark.app.common import app_settings, current_ui_mode, db_connection, inject_global_styles
 from yargumark.config import ui_threshold
 from yargumark.db import DocumentRecord, upsert_document
 from yargumark.marker.render import render_document_html
 from yargumark.nlp.pipeline import process_document
 
 st.set_page_config(page_title="Sandbox", layout="wide")
+inject_global_styles()
 st.title("Песочница")
 
 SANDBOX_URL = "sandbox://scratch"

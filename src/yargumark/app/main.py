@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import streamlit as st
 
-from yargumark.app.common import app_settings
+from yargumark.app.common import app_settings, inject_global_styles
 from yargumark.config import ui_threshold
 
 st.set_page_config(page_title="YarguMark", layout="wide")
+inject_global_styles()
 
 settings = app_settings()
 if "ui_mode" not in st.session_state:
