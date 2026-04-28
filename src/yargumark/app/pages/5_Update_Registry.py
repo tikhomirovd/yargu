@@ -12,15 +12,24 @@ from yargumark.registry.normalize import normalize_name
 
 st.set_page_config(page_title="Update Registry Demo", layout="wide")
 inject_global_styles()
-st.title("Демо: обновление реестра без LLM")
+st.title("Новая запись в реестре без повторного ИИ по архиву")
 
 settings = app_settings()
 mode = current_ui_mode()
 threshold = ui_threshold(settings, mode)
 
 st.markdown(
-    "Добавьте тестовую запись в реестр и пересоберите упоминания **только из сохранённых "
-    "`extracted_spans`** — без вызова Haiku. Кеш разметки сбрасывается."
+    "**Зачем эта страница:** показать сценарий «реестр пополнился — сайт не перечитываем целиком моделью».\n\n"
+    "**Как это устроено:**\n"
+    "1. Первичная разметка текстов — дорогой шаг: Haiku извлекает кандидатов; они сохраняются в таблице "
+    "`extracted_spans`.\n"
+    "2. Вы добавляете **новую строку** справочника (каноническое имя и алиасы вручную — без стоимости LLM, "
+    "если не запускаете отдельный скрипт обогащения).\n"
+    "3. **Переиндекс** пересобирает только поле «совпало с реестром» из уже сохранённых извлечений — "
+    "SQLite и правила матчинга, **без повторного вызова Haiku по тысячам страниц**.\n\n"
+    "**Что здесь не делаем:** полный повтор разметки всего архива через Haiku — это отдельная долгая и дорогая "
+    "операция (для пилота обычно запускается пакетно из терминала, не в живом демо).\n\n"
+    "**Когда показывать в демо:** после просмотра документов, когда нужно «wow» про скорость и нулевую стоимость LLM на шаге."
 )
 
 with st.form("registry_add"):
@@ -62,10 +71,10 @@ if submitted:
     st.success(
         f"Запись {'создана' if created else 'обновлена'}. "
         f"Переиндекс за **{stats.elapsed_ms} ms**: spans={stats.spans_processed}, "
-        f"mentions={stats.mentions_written}, документов по extracted_spans: "
-        f"{stats.documents_touched}. LLM не вызывалась."
+        f"mentions={stats.mentions_written}, затронуто документов (по spans): "
+        f"{stats.documents_touched}. Вызова Haiku на этом шаге не было."
     )
-    st.caption("Стоимость LLM для этого шага: **$0** (только SQLite + fuzzy/lemma).")
+    st.caption("Стоимость LLM для этого шага: **$0** (SQLite и матчинг).")
 
     preview_id: int | None = None
     with db_connection() as conn:
@@ -75,7 +84,7 @@ if submitted:
                 preview_id = doc_id
                 break
     if preview_id is not None:
-        st.subheader("Пример документа до / после")
+        st.subheader("Пример: текст и версия с плашками")
         with db_connection() as conn:
             detail = fetch_document_detail(conn, preview_id)
             marked = render_document_html(conn, preview_id, mode, settings=settings)

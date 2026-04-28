@@ -15,7 +15,14 @@ from yargumark.marker.render import render_document_html
 
 st.set_page_config(page_title="Fixtures", layout="wide")
 inject_global_styles()
-st.title("Демо-фикстуры")
+st.title("Качество (тестовые кейсы)")
+st.markdown(
+    "**Зачем эта страница:** заранее подготовленные тексты с **эталоном** (ground truth) — чтобы считать "
+    "precision/recall и показать на слайде, как система ведёт себя на **намеренно сложных** формулировках.\n\n"
+    "**Когда показывать:** после основного сценария, если аудитория спрашивает про метрики или нужен контролируемый "
+    "набор примеров.\n\n"
+    "Реальные страницы с найденными упоминаниями удобнее смотреть в **Просмотр документа**."
+)
 
 root = Path(__file__).resolve().parents[4]
 fixtures_path = root / "demo" / "fixtures.json"
@@ -72,7 +79,7 @@ for item in fixtures:
             st.subheader("Исходный текст")
             st.text(body)
         with right:
-            st.subheader("Разметка (БД)")
+            st.subheader("Результат в базе (плашки)")
             with db_connection() as conn:
                 doc_id = get_document_id_by_url(conn, url)
                 if doc_id is None:

@@ -822,3 +822,90 @@ def fetch_mention_surfaces(
         (doc_id, min_confidence),
     )
     return [str(r[0]) for r in cursor.fetchall()]
+
+
+@dataclass(frozen=True)
+class DocumentCounts:
+    total: int
+    by_source: dict[str, int]
+
+
+def count_documents_by_source(connection: sqlite3.Connection) -> DocumentCounts:
+    cursor = connection.cursor()
+    cursor.execute("SELECT source, COUNT(*) FROM documents GROUP BY source")
+    by_source = {str(r[0]): int(r[1]) for r in cursor.fetchall()}
+    total = sum(by_source.values())
+    return DocumentCounts(total=total, by_source=by_source)
+
+
+@dataclass(frozen=True)
+class LlmCacheRollup:
+    row_count: int
+    input_tokens: int
+    output_tokens: int
+    cached_input_tokens: int
+
+
+def _body_sha256(body: str) -> str:
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def rollup_llm_cache_for_document_bodies(connection: sqlite3.Connection) -> LlmCacheRollup:
+    """llm_cache rows keyed by sha256(document.body); primary NER call per page."""
+    cursor = connection.cursor()
+    cursor.execute("SELECT body FROM documents")
+    hashes = {_body_sha256(str(r[0])) for r in cursor.fetchall() if r[0] is not None}
+    if not hashes:
+        return LlmCacheRollup(0, 0, 0, 0)
+    cursor.execute(
+        "SELECT text_sha256, input_tokens, output_tokens, cached_input_tokens FROM llm_cache"
+    )
+    row_count = 0
+    input_tokens = 0
+    output_tokens = 0
+    cached_input_tokens = 0
+    for r in cursor.fetchall():
+        if str(r[0]) in hashes:
+            row_count += 1
+            input_tokens += int(r[1])
+            output_tokens += int(r[2])
+            cached_input_tokens += int(r[3])
+    return LlmCacheRollup(row_count, input_tokens, output_tokens, cached_input_tokens)
+
+
+def rollup_llm_cache_all(connection: sqlite3.Connection) -> LlmCacheRollup:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT COUNT(*), COALESCE(SUM(input_tokens), 0), COALESCE(SUM(output_tokens), 0),
+               COALESCE(SUM(cached_input_tokens), 0)
+        FROM llm_cache
+        """
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return LlmCacheRollup(0, 0, 0, 0)
+    return LlmCacheRollup(
+        int(row[0]),
+        int(row[1]),
+        int(row[2]),
+        int(row[3]),
+    )
+
+
+def count_mentions_by_entity_type(
+    connection: sqlite3.Connection,
+    min_confidence: float,
+) -> dict[str, int]:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT e.type, COUNT(m.id)
+        FROM mentions m
+        JOIN entities e ON e.id = m.entity_id
+        WHERE m.confidence >= ?
+        GROUP BY e.type
+        """,
+        (min_confidence,),
+    )
+    return {str(r[0]): int(r[1]) for r in cursor.fetchall()}

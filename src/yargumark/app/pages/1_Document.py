@@ -16,6 +16,10 @@ from yargumark.marker.render import render_document_html
 st.set_page_config(page_title="Document", layout="wide")
 inject_global_styles()
 st.title("Просмотр документа")
+st.caption(
+    "Зачем: основной экран продукта — исходный текст рядом с версией с плашками и объяснениями. "
+    "Когда показывать: в начале демо."
+)
 
 settings = app_settings()
 mode = current_ui_mode()

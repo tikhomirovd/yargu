@@ -9,6 +9,9 @@ from yargumark.db import list_documents_with_mentions
 st.set_page_config(page_title="News Library", layout="wide")
 inject_global_styles()
 st.title("Библиотека новостей")
+st.caption(
+    "Зачем: масштаб корпуса. Когда показывать: после просмотра одной страницы, чтобы показать охват."
+)
 
 settings = app_settings()
 mode = current_ui_mode()
