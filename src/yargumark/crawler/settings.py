@@ -11,11 +11,11 @@ ROBOTSTXT_OBEY = True
 
 USER_AGENT = "YarGuMarkBot/0.1 (academic; tikhomirovd00@gmail.com)"
 
-# Как в yagu scraper: вежливый темп и ограничение параллелизма.
+# Как в yagu scraper: вежливый темп и параллелизм 2 (меньше шанс словить 503 у CDN).
 DOWNLOAD_DELAY = 1.0
 RANDOMIZE_DOWNLOAD_DELAY = 0.3
-CONCURRENT_REQUESTS = 4
-CONCURRENT_REQUESTS_PER_DOMAIN = 4
+CONCURRENT_REQUESTS = 2
+CONCURRENT_REQUESTS_PER_DOMAIN = 2
 
 AUTOTHROTTLE_ENABLED = True
 AUTOTHROTTLE_START_DELAY = 1.0
@@ -25,8 +25,12 @@ AUTOTHROTTLE_MAX_DELAY = 8.0
 RETRY_TIMES = 5
 
 DEFAULT_REQUEST_HEADERS = {
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "ru,en;q=0.5",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "ru,en;q=0.8,en-US;q=0.5",
+    "Upgrade-Insecure-Requests": "1",
+    # Часть фронтов/CDN ожидает «навигационный» профиль запроса (браузер шлёт Sec-Fetch-*).
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
 }
 
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
