@@ -21,6 +21,9 @@ AUTOTHROTTLE_ENABLED = True
 AUTOTHROTTLE_START_DELAY = 1.0
 AUTOTHROTTLE_MAX_DELAY = 8.0
 
+# Transient 503/502 on busy sites: default RETRY_TIMES=2 is often too few.
+RETRY_TIMES = 5
+
 DEFAULT_REQUEST_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "ru,en;q=0.5",
@@ -52,6 +55,7 @@ def scrapy_settings_dict() -> dict[str, Any]:
         "AUTOTHROTTLE_ENABLED": AUTOTHROTTLE_ENABLED,
         "AUTOTHROTTLE_START_DELAY": AUTOTHROTTLE_START_DELAY,
         "AUTOTHROTTLE_MAX_DELAY": AUTOTHROTTLE_MAX_DELAY,
+        "RETRY_TIMES": RETRY_TIMES,
         "DEFAULT_REQUEST_HEADERS": DEFAULT_REQUEST_HEADERS,
         "TWISTED_REACTOR": TWISTED_REACTOR,
         "FEED_EXPORT_ENCODING": FEED_EXPORT_ENCODING,

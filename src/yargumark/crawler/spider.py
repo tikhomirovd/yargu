@@ -22,8 +22,11 @@ from yargumark.crawler.urlnorm import (
 )
 from yargumark.db import get_connection
 
-# Одна точка входа: главная. Остальной сайт добирается LinkExtractor в глубину.
-DEFAULT_SEED_URLS: tuple[str, ...] = ("https://www.uniyar.ac.ru/",)
+# Сиды: www и apex — при 503 на одном корне второй иногда отвечает; обход остального через LinkExtractor.
+DEFAULT_SEED_URLS: tuple[str, ...] = (
+    "https://www.uniyar.ac.ru/",
+    "https://uniyar.ac.ru/",
+)
 
 _UNIYAR_LINK_EXTRACTOR = LinkExtractor(
     allow_domains=["uniyar.ac.ru", "www.uniyar.ac.ru"],
