@@ -670,6 +670,10 @@ def compute_mentions_hash(
     min_confidence: float,
 ) -> str:
     cursor = connection.cursor()
+    cursor.execute("SELECT body FROM documents WHERE id = ?", (doc_id,))
+    body_row = cursor.fetchone()
+    body_text = str(body_row[0]) if body_row is not None and body_row[0] is not None else ""
+    body_hash = hashlib.sha256(body_text.encode("utf-8")).hexdigest()[:16]
     cursor.execute(
         """
         SELECT id, entity_id, confidence
@@ -679,8 +683,10 @@ def compute_mentions_hash(
         """,
         (doc_id, min_confidence),
     )
-    payload = "|".join(f"{int(r[0])}:{int(r[1])}:{float(r[2]):.6f}" for r in cursor.fetchall())
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    mentions_part = "|".join(
+        f"{int(r[0])}:{int(r[1])}:{float(r[2]):.6f}" for r in cursor.fetchall()
+    )
+    return hashlib.sha256(f"{body_hash}::{mentions_part}".encode()).hexdigest()
 
 
 def upsert_render_cache(connection: sqlite3.Connection, row: RenderCacheRow) -> None:
