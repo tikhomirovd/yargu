@@ -1,0 +1,10 @@
+[
+  {
+    "url": "demo://fixture/neutral",
+    "expected_mention_surfaces": []
+  },
+  {
+    "url": "demo://fixture/social-alias",
+    "expected_mention_surfaces": ["Инста"]
+  }
+]

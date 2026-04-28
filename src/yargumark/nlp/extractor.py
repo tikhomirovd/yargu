@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -36,11 +37,11 @@ def _parse_spans_payload(text: str) -> list[LlmSpan]:
     if match is not None:
         cleaned = match.group(1).strip()
     payload = json.loads(cleaned)
-    raw_spans = payload.get("spans", [])
-    if not isinstance(raw_spans, list):
+    spans_value = payload.get("spans", [])
+    if not isinstance(spans_value, list):
         raise ValueError("Invalid spans payload.")
     spans: list[LlmSpan] = []
-    for item in cast(list[Any], raw_spans):
+    for item in cast(Sequence[object], spans_value):
         if not isinstance(item, dict):
             continue
         row = cast(dict[str, Any], item)

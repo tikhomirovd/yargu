@@ -424,3 +424,225 @@ def upsert_llm_cache(connection: sqlite3.Connection, row: LlmCacheRow) -> None:
             row.cached_input_tokens,
         ),
     )
+
+
+@dataclass(frozen=True)
+class DocumentDetailRow:
+    id: int
+    title: str
+    url: str
+    body: str
+    source: str
+    published_at: str | None
+
+
+@dataclass(frozen=True)
+class DocumentSummaryRow:
+    id: int
+    title: str
+    url: str
+    published_at: str | None
+    source: str
+    mention_count: int
+
+
+@dataclass(frozen=True)
+class MentionMarkupRow:
+    start: int
+    end: int
+    surface: str
+    entity_type: str
+    canonical_name: str
+    confidence: float
+    match_method: str
+    reasoning: str
+
+
+@dataclass(frozen=True)
+class RenderCacheRow:
+    doc_id: int
+    mode: str
+    html_marked: str
+    mentions_hash: str
+
+
+def fetch_document_detail(connection: sqlite3.Connection, doc_id: int) -> DocumentDetailRow | None:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT id, title, url, body, source, published_at
+        FROM documents
+        WHERE id = ?
+        """,
+        (doc_id,),
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    return DocumentDetailRow(
+        id=int(row[0]),
+        title=str(row[1]),
+        url=str(row[2]),
+        body=str(row[3]),
+        source=str(row[4]),
+        published_at=str(row[5]) if row[5] is not None else None,
+    )
+
+
+def list_documents_with_mentions(
+    connection: sqlite3.Connection,
+    min_confidence: float,
+    source: str | None = None,
+    limit: int = 500,
+) -> list[DocumentSummaryRow]:
+    cursor = connection.cursor()
+    source_filter = ""
+    params: list[object] = [min_confidence]
+    if source is not None:
+        source_filter = "AND d.source = ?"
+        params.append(source)
+    params.append(limit)
+    cursor.execute(
+        f"""
+        SELECT d.id, d.title, d.url, d.published_at, d.source,
+               COUNT(m.id) AS mention_count
+        FROM documents d
+        LEFT JOIN mentions m
+          ON m.doc_id = d.id AND m.confidence >= ?
+        WHERE 1=1 {source_filter}
+        GROUP BY d.id
+        ORDER BY d.fetched_at DESC
+        LIMIT ?
+        """,
+        tuple(params),
+    )
+    rows = cursor.fetchall()
+    return [
+        DocumentSummaryRow(
+            id=int(r[0]),
+            title=str(r[1]),
+            url=str(r[2]),
+            published_at=str(r[3]) if r[3] is not None else None,
+            source=str(r[4]),
+            mention_count=int(r[5]),
+        )
+        for r in rows
+    ]
+
+
+def fetch_mentions_for_markup(
+    connection: sqlite3.Connection,
+    doc_id: int,
+    min_confidence: float,
+) -> list[MentionMarkupRow]:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT m.start_offset, m.end_offset, m.surface_form, e.type, e.canonical_name,
+               m.confidence, m.match_method, m.reasoning
+        FROM mentions m
+        JOIN entities e ON e.id = m.entity_id
+        WHERE m.doc_id = ? AND m.confidence >= ?
+        ORDER BY m.start_offset ASC, m.end_offset DESC
+        """,
+        (doc_id, min_confidence),
+    )
+    return [
+        MentionMarkupRow(
+            start=int(r[0]),
+            end=int(r[1]),
+            surface=str(r[2]),
+            entity_type=str(r[3]),
+            canonical_name=str(r[4]),
+            confidence=float(r[5]),
+            match_method=str(r[6]),
+            reasoning=str(r[7]),
+        )
+        for r in cursor.fetchall()
+    ]
+
+
+def compute_mentions_hash(
+    connection: sqlite3.Connection,
+    doc_id: int,
+    min_confidence: float,
+) -> str:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT id, entity_id, confidence
+        FROM mentions
+        WHERE doc_id = ? AND confidence >= ?
+        ORDER BY id ASC
+        """,
+        (doc_id, min_confidence),
+    )
+    payload = "|".join(f"{int(r[0])}:{int(r[1])}:{float(r[2]):.6f}" for r in cursor.fetchall())
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def upsert_render_cache(connection: sqlite3.Connection, row: RenderCacheRow) -> None:
+    now = datetime.now(UTC).isoformat()
+    connection.execute(
+        """
+        INSERT INTO render_cache (doc_id, mode, html_marked, mentions_hash, rendered_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(doc_id, mode) DO UPDATE SET
+            html_marked = excluded.html_marked,
+            mentions_hash = excluded.mentions_hash,
+            rendered_at = excluded.rendered_at
+        """,
+        (row.doc_id, row.mode, row.html_marked, row.mentions_hash, now),
+    )
+
+
+def get_render_cache(
+    connection: sqlite3.Connection,
+    doc_id: int,
+    mode: str,
+) -> RenderCacheRow | None:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT doc_id, mode, html_marked, mentions_hash
+        FROM render_cache
+        WHERE doc_id = ? AND mode = ?
+        """,
+        (doc_id, mode),
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    return RenderCacheRow(
+        doc_id=int(row[0]),
+        mode=str(row[1]),
+        html_marked=str(row[2]),
+        mentions_hash=str(row[3]),
+    )
+
+
+def count_entities_by_type(connection: sqlite3.Connection) -> dict[str, int]:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT type, COUNT(*) FROM entities WHERE is_active = 1 GROUP BY type
+        """
+    )
+    return {str(r[0]): int(r[1]) for r in cursor.fetchall()}
+
+
+def latest_registry_sync_finished_at(connection: sqlite3.Connection) -> str | None:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT finished_at
+        FROM registry_sync_log
+        WHERE finished_at IS NOT NULL AND error IS NULL
+        ORDER BY finished_at DESC
+        LIMIT 1
+        """
+    )
+    row = cursor.fetchone()
+    if row is None or row[0] is None:
+        return None
+    return str(row[0])

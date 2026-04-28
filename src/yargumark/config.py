@@ -28,3 +28,10 @@ class Settings(BaseSettings):
 
 def get_settings() -> Settings:
     return Settings()
+
+
+def ui_threshold(settings: Settings, ui_mode: str | None) -> float:
+    mode = (ui_mode or settings.mode or "demo").strip().lower()
+    if mode == "production":
+        return float(settings.production_confidence_threshold)
+    return float(settings.demo_confidence_threshold)
