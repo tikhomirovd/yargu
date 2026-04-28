@@ -20,6 +20,12 @@ def process_document_cli() -> None:
         default=None,
         help="When used with --all, only documents where documents.source matches (e.g. uniyar).",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="When used with --all, process at most N documents.",
+    )
     args = parser.parse_args()
     if args.all and args.doc_id is not None:
         parser.error("Use either --doc-id or --all, not both.")
@@ -30,6 +36,8 @@ def process_document_cli() -> None:
     with get_connection(settings.db_path) as connection:
         if args.all:
             doc_ids = get_all_document_ids(connection, args.source)
+            if args.limit is not None:
+                doc_ids = doc_ids[: args.limit]
         else:
             if single_doc_id is None:
                 raise RuntimeError("Expected --doc-id after validation.")

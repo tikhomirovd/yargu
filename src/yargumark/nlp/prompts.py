@@ -118,9 +118,12 @@ def build_system_prompt(digest: list[DigestEntityRow]) -> str:
         "Registry digest (top entries, not exhaustive — full match is validated later):",
     ]
     for row in digest:
+        aliases_part = (
+            f" aliases=[{', '.join(row.short_aliases)}]" if row.short_aliases else ""
+        )
         lines.append(
-            f"- id={row.id} type={row.entity_type} name={row.canonical_name} "
-            f"source={row.registry_source}:{row.registry_id}"
+            f"- id={row.id} type={row.entity_type} name={row.canonical_name}"
+            f"{aliases_part} source={row.registry_source}:{row.registry_id}"
         )
     lines.append("")
     return "\n".join(lines)

@@ -281,6 +281,7 @@ class DigestEntityRow:
     canonical_name: str
     registry_source: str
     registry_id: str
+    short_aliases: list[str]
 
 
 @dataclass(frozen=True)
@@ -350,22 +351,38 @@ def fetch_digest_entities(connection: sqlite3.Connection, limit: int) -> list[Di
         SELECT id, type, canonical_name, registry_source, registry_id
         FROM entities
         WHERE is_active = 1
-        ORDER BY id DESC
+        ORDER BY id ASC
         LIMIT ?
         """,
         (limit,),
     )
     rows = cursor.fetchall()
-    return [
-        DigestEntityRow(
-            id=int(r[0]),
-            entity_type=str(r[1]),
-            canonical_name=str(r[2]),
-            registry_source=str(r[3]),
-            registry_id=str(r[4]),
+    result: list[DigestEntityRow] = []
+    for r in rows:
+        entity_id = int(r[0])
+        aliases_cursor = connection.cursor()
+        aliases_cursor.execute(
+            """
+            SELECT alias FROM entity_aliases
+            WHERE entity_id = ?
+              AND length(alias) <= 40
+            ORDER BY length(alias) ASC
+            LIMIT 5
+            """,
+            (entity_id,),
         )
-        for r in rows
-    ]
+        short_aliases = [str(a[0]) for a in aliases_cursor.fetchall()]
+        result.append(
+            DigestEntityRow(
+                id=entity_id,
+                entity_type=str(r[1]),
+                canonical_name=str(r[2]),
+                registry_source=str(r[3]),
+                registry_id=str(r[4]),
+                short_aliases=short_aliases,
+            )
+        )
+    return result
 
 
 def fetch_entities_for_matching(connection: sqlite3.Connection) -> list[EntityForMatch]:

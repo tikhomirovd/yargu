@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 from urllib.parse import urljoin
 
 import scrapy
+import trafilatura
 from scrapy import Request
 from scrapy.http import Response
 
@@ -11,15 +13,17 @@ from yargumark.config import get_settings
 from yargumark.db import DocumentRecord, get_connection, upsert_document
 
 START_URLS = (
-    "https://uniyar.ac.ru/news/main1443000/?PAGEN_1=1",
-    "https://uniyar.ac.ru/events/?PAGEN_1=1",
-    "https://uniyar.ac.ru/pressroom/?PAGEN_1=1",
+    "http://www.uniyar.ac.ru/news/main1443000/?PAGEN_1=1",
+    "http://www.uniyar.ac.ru/events/?PAGEN_1=1",
+    "http://www.uniyar.ac.ru/pressroom/?PAGEN_1=1",
 )
+
+_ALLOWED_PREFIXES = ("http://www.uniyar.ac.ru/", "https://www.uniyar.ac.ru/")
 
 
 class UniyarSpider(scrapy.Spider):
     name = "uniyar"
-    allowed_domains = ("uniyar.ac.ru",)
+    allowed_domains = ("uniyar.ac.ru", "www.uniyar.ac.ru")
 
     def start_requests(self) -> Iterator[Request]:
         for url in START_URLS:
@@ -34,7 +38,7 @@ class UniyarSpider(scrapy.Spider):
         article_links = response.css(link_selector).getall()
         for href in article_links:
             absolute_url = urljoin(response.url, href)
-            if absolute_url.startswith("https://uniyar.ac.ru/"):
+            if any(absolute_url.startswith(p) for p in _ALLOWED_PREFIXES):
                 yield response.follow(absolute_url, callback=self.parse_article)
 
         next_page_link = response.css("a[rel='next']::attr(href)").get()
@@ -46,15 +50,18 @@ class UniyarSpider(scrapy.Spider):
             yield response.follow(next_page_link, callback=self.parse)
 
     def parse_article(self, response: Response) -> None:
-        title = response.css("h1::text, .news-detail-title::text").get(default="").strip()
-        paragraph_selector = "article p::text, .news-detail p::text, .content p::text"
-        paragraphs = response.css(paragraph_selector).getall()
-        body = "\n".join(paragraph.strip() for paragraph in paragraphs if paragraph.strip())
+        og_title = response.css('meta[property="og:title"]::attr(content)').get()
+        h1s = response.css("h1::text").getall()
+        title = (og_title or (h1s[1] if len(h1s) >= 2 else h1s[0] if h1s else "")).strip()
+
+        extracted = trafilatura.extract(response.text, include_comments=False, include_tables=True)
+        body = re.sub(r"\s+", " ", extracted or "").strip()
         if not title or not body:
             return
 
-        published_at = response.css("time::attr(datetime), .date::text").get(default=None)
-        html_raw = response.text
+        published_at = response.css("span.b-news__date-detail::text, time::attr(datetime)").get(
+            default=None
+        )
 
         settings = get_settings()
         with get_connection(settings.db_path) as connection:
@@ -64,7 +71,7 @@ class UniyarSpider(scrapy.Spider):
                     url=response.url,
                     title=title,
                     body=body,
-                    html_raw=html_raw,
+                    html_raw=response.text,
                     published_at=published_at,
                     source="uniyar",
                 ),

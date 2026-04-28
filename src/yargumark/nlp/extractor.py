@@ -143,6 +143,15 @@ def _align_span_to_body(span: LlmSpan, body: str, window: int) -> LlmSpan | None
             start = lo + match.start()
             end = lo + match.end()
             return replace(span, start=start, end=end)
+    # Fallback: full-document scan when windowed search fails
+    idx = body.find(span.surface)
+    if idx >= 0:
+        return replace(span, start=idx, end=idx + len(span.surface))
+    if len(parts) >= 2:
+        pattern = r"\s+".join(re.escape(part) for part in parts)
+        match = re.search(pattern, body)
+        if match is not None:
+            return replace(span, start=match.start(), end=match.end())
     return None
 
 

@@ -22,7 +22,7 @@ def _parse_list_payload(text: str) -> list[dict[str, Any]]:
     if not isinstance(payload, list):
         raise ValueError("Model must return a JSON array.")
     rows: list[dict[str, Any]] = []
-    for row in cast(list[Any], payload):
+    for row in cast(list[Any], payload):  # type: ignore[redundant-cast]
         if isinstance(row, dict):
             rows.append(cast(dict[str, Any], row))
     return rows
