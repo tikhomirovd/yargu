@@ -12,7 +12,18 @@ _DENIED_PATH_SUBSTRINGS: tuple[str, ...] = (
     "/media/",
 )
 
-_DENIED_EXTENSIONS: frozenset[str] = frozenset(
+# Scrapy LinkExtractor.deny patterns (regex against full URL).
+LINK_EXTRACTOR_DENY_PATTERNS: tuple[str, ...] = (
+    r"/upload/",
+    r"/bitrix/",
+    r"/photos/",
+    r"/gallery/",
+    r"/video/",
+    r"/media/",
+)
+
+# Для LinkExtractor.deny_extensions (как в yagu).
+CRAWL_DENY_FILE_EXTENSIONS: frozenset[str] = frozenset(
     {
         "7z",
         "avi",
@@ -57,36 +68,8 @@ def normalize_document_url(url: str) -> str:
     return clean.rstrip("/")
 
 
-def _is_faculty_news_article_path(parts: list[str]) -> bool:
-    """Новости подразделения: /faculties/<подразделение>/news/<slug>/ (не сам листинг /news/)."""
-    if len(parts) < 4 or parts[0] != "faculties":
-        return False
-    try:
-        news_idx = parts.index("news")
-    except ValueError:
-        return False
-    return news_idx < len(parts) - 1
-
-
-def is_probable_uniyar_article_url(url: str) -> bool:
-    """Карточка материала: не разводящая страница и не пагинация листинга."""
-    parsed = urlparse(url)
-    host = (parsed.netloc or "").lower()
-    if host not in {"www.uniyar.ac.ru", "uniyar.ac.ru"}:
-        return False
-    query_l = (parsed.query or "").lower()
-    if "pagen_" in query_l:
-        return False
-    parts = [p for p in (parsed.path or "").strip("/").split("/") if p]
-    if len(parts) < 3:
-        return False
-    if parts[0] in {"news", "events", "pressroom"}:
-        return True
-    return _is_faculty_news_article_path(parts)
-
-
 def should_skip_crawl_url(url: str) -> bool:
-    """Не следовать за медиа, служебными путями Bitrix и файловым выдачей."""
+    """Не ходить на медиа, служебные пути Bitrix и файловые URL."""
     parsed = urlparse(url)
     path_l = (parsed.path or "").lower()
     for sub in _DENIED_PATH_SUBSTRINGS:
@@ -95,6 +78,17 @@ def should_skip_crawl_url(url: str) -> bool:
     suffix = PurePosixPath(path_l).suffix
     if suffix:
         ext = suffix.lstrip(".").lower()
-        if ext in _DENIED_EXTENSIONS:
+        if ext in CRAWL_DENY_FILE_EXTENSIONS:
             return True
     return False
+
+
+def should_index_uniyar_page(url: str) -> bool:
+    """Широкий режим: любая страница сайта, кроме явных медиа/bitrix (см. should_skip_crawl_url)."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+    host = (parsed.netloc or "").lower()
+    if host not in {"www.uniyar.ac.ru", "uniyar.ac.ru"}:
+        return False
+    return not should_skip_crawl_url(url)

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from yargumark.crawler.urlnorm import (
-    is_probable_uniyar_article_url,
     normalize_document_url,
+    should_index_uniyar_page,
     should_skip_crawl_url,
 )
 
@@ -19,30 +19,15 @@ def test_skip_media_and_upload_paths() -> None:
     assert should_skip_crawl_url("https://www.uniyar.ac.ru/foo/photo.jpg")
 
 
-def test_allow_article_path() -> None:
-    assert not should_skip_crawl_url(
-        "https://www.uniyar.ac.ru/news/main1443000/v-demidovskom-universitete-napisali-diktantpobedy/"
-    )
+def test_index_allows_listings_and_pagination() -> None:
+    assert should_index_uniyar_page("https://www.uniyar.ac.ru/news/science/")
+    assert should_index_uniyar_page("https://www.uniyar.ac.ru/news/main1443000/?PAGEN_1=2")
+    assert should_index_uniyar_page("https://www.uniyar.ac.ru/faculties/economic/news/")
 
 
-def test_article_url_requires_three_path_segments() -> None:
-    assert is_probable_uniyar_article_url(
-        "https://www.uniyar.ac.ru/news/science/na-fakultete-biologii-test/"
-    )
-    assert not is_probable_uniyar_article_url("https://www.uniyar.ac.ru/news/science/")
-    assert not is_probable_uniyar_article_url(
-        "https://www.uniyar.ac.ru/news/main1443000/?PAGEN_1=2"
-    )
+def test_index_rejects_non_http() -> None:
+    assert not should_index_uniyar_page("mailto:a@b.c")
 
 
-def test_faculty_news_listing_not_article() -> None:
-    """Разводящая страница факультета без slug материала."""
-    assert not is_probable_uniyar_article_url(
-        "https://www.uniyar.ac.ru/faculties/economic/news/"
-    )
-
-
-def test_faculty_news_article_url() -> None:
-    assert is_probable_uniyar_article_url(
-        "https://www.uniyar.ac.ru/faculties/economic/news/zavershilsya-forum-kadry-ved/"
-    )
+def test_index_rejects_wrong_host() -> None:
+    assert not should_index_uniyar_page("https://example.com/foo")
