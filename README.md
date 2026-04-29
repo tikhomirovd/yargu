@@ -1,156 +1,156 @@
 # YarguMark MVP
 
-YarguMark is a local MVP for automatic legal marking of mentions from Russian registries:
-- foreign agents;
-- undesirable organizations;
-- terrorist and extremist organizations;
-- organizations banned by court decision.
+YarguMark — локальный MVP для автоматической юридической маркировки упоминаний из российских реестров:
+- иностранные агенты;
+- нежелательные организации;
+- террористические и экстремистские организации;
+- организации, запрещённые решением суда.
 
-This repository now includes Day 1 MVP foundation:
-- Python project configuration (`uv`, strict typing, linting);
-- SQLite schema and DB bootstrap;
-- Scrapy-based crawler skeleton for `uniyar.ac.ru`.
+В репозитории заложен фундамент первого дня MVP:
+- конфигурация Python (`uv`, строгая типизация, линтеры);
+- схема SQLite и инициализация БД;
+- каркас краулера на Scrapy для `uniyar.ac.ru`.
 
-## Execution Track
+## Трек реализации
 
-The active implementation track is **Plan A (Demo-first, 5 working days)**.
+Активный трек — **план A (сначала демо, 5 рабочих дней)**.
 
-Why this track:
-- fastest path to a convincing customer demo;
-- still preserves production-oriented architecture;
-- keeps Plan B (Production-first) as fallback if recall quality drops.
+Почему он:
+- самый быстрый путь к убедительной демонстрации заказчику;
+- архитектура остаётся пригодной для продакшена;
+- план B (сначала прод) остаётся запасным, если просадится recall.
 
-## Demo KPI Baseline
+## Базовые KPI демо
 
-Target metrics for MVP demonstration:
-- Demo mode precision: `>= 0.95`
-- Demo mode recall: `>= 0.85`
-- Production mode precision: `>= 0.80`
-- Production mode recall: `>= 0.95`
-- Incremental reindex (1 entity, 500 docs): `< 1s`
-- Haiku cost for 500 docs: `< $2` (demo), `< $3` (production) — order-of-magnitude; see [NLP cost (Haiku)](#nlp-cost-haiku) below
+Целевые метрики для демонстрации MVP:
+- precision в режиме demo: `>= 0.95`
+- recall в режиме demo: `>= 0.85`
+- precision в режиме production: `>= 0.80`
+- recall в режиме production: `>= 0.95`
+- инкрементальный reindex (1 сущность, 500 документов): `< 1 с`
+- стоимость Haiku на 500 документов: `< $2` (demo), `< $3` (production) — порядок величины; см. [Стоимость NLP (Haiku)](#nlp-cost-haiku)
 
-## Operational Documents
+## Операционные документы
 
-- Track confirmation and KPI lock: `docs/plan-track.md`
-- Day-by-day checklists: `docs/iteration-checklists.md`
-- 10-minute demo script: `docs/demo-script-10min.md`
-- Daily go/no-go gates: `docs/go-no-go.md`
-- Session memory and calibration notes: `CLAUDE.md`
+- выбор трека и фиксация KPI: `docs/plan-track.md`
+- чеклисты по дням: `docs/iteration-checklists.md`
+- сценарий демо на 10 минут: `docs/demo-script-10min.md`
+- ежедневные ворота go/no-go: `docs/go-no-go.md`
+- память сессий и калибровка: `CLAUDE.md`
 
-## Requirements
+## Требования
 
 - Python **3.12+**
-- [`uv`](https://docs.astral.sh/uv/) for installs and `uv run …`
-- **Anthropic API key** for NLP (`yargumark-process-doc`, optional alias enrichment flows that call the API)
+- [`uv`](https://docs.astral.sh/uv/) для зависимостей и команд `uv run …`
+- **ключ Anthropic API** для NLP (`yargumark-process-doc`, опционально обогащение алиасов через API)
 
-## Environment
+## Окружение
 
-Copy the example env file and edit values:
+Скопируйте пример и отредактируйте значения:
 
 ```bash
 cp .env.example .env
 ```
 
-Important variables (see `.env.example` for the full list):
+Важные переменные (полный список — в `.env.example`):
 
-| Variable | Role |
-|----------|------|
-| `ANTHROPIC_API_KEY` | Required for Haiku extraction / checks |
-| `ANTHROPIC_MODEL` | Model id for the Anthropic client (default in repo: `claude-haiku-4-5-20251001`; alias `claude-haiku-4-5` tracks the latest 4.5 snapshot) |
-| `DB_PATH` | SQLite file (default `data/yargumark.db`) |
-| `MODE` | `demo` vs `production` — confidence thresholds in the UI |
-| `DEMO_CONFIDENCE_THRESHOLD` / `PRODUCTION_CONFIDENCE_THRESHOLD` | Matcher cutoffs |
-| `CONTEXT_CHECK_LOW` / `CONTEXT_CHECK_HIGH` | Optional extra Haiku “context” step for borderline `PERSON` spans |
+| Переменная | Назначение |
+|------------|------------|
+| `ANTHROPIC_API_KEY` | обязателен для извлечения Haiku и проверок |
+| `ANTHROPIC_MODEL` | идентификатор модели в клиенте Anthropic (в репозитории по умолчанию: `claude-haiku-4-5-20251001`; алиас `claude-haiku-4-5` ведёт на актуальный снапшот 4.5) |
+| `DB_PATH` | файл SQLite (по умолчанию `data/yargumark.db`) |
+| `MODE` | `demo` или `production` — пороги уверенности в UI |
+| `DEMO_CONFIDENCE_THRESHOLD` / `PRODUCTION_CONFIDENCE_THRESHOLD` | пороги матчера |
+| `CONTEXT_CHECK_LOW` / `CONTEXT_CHECK_HIGH` | опциональный дополнительный шаг Haiku «контекст» для пограничных спанов типа `PERSON` |
 
-## End-to-end pipeline (typical order)
+## Сквозной пайплайн (типичный порядок)
 
-1. **Install** — `uv sync`
-2. **Database schema** — `uv run yargumark-init-db`
-3. **Registries** — `uv run yargumark-registry-sync sync` (loads configured sources into `entities` / aliases; includes remote and bundled fallbacks depending on config)
-4. **Crawl news** (optional) — `uv run yargumark-crawl` — see crawler CLI in `src/yargumark/crawler/run.py` for `--start-url`, `--max-depth`, `--link-limit`, `--only-new`, `--fast-local`
-5. **NLP per document** — `uv run yargumark-process-doc --doc-id N` or batch `uv run yargumark-process-doc --all --source uniyar --limit 500`
-6. **Reindex mentions** (no LLM) — `uv run yargumark-reindex` — rebuilds `mentions` from `extracted_spans` + current registry
-7. **UI** — `uv run streamlit run src/yargumark/app/main.py`
-8. **Benchmark** (optional) — `uv run python scripts/benchmark.py` — compares fixtures vs DB at demo/production thresholds
+1. **Установка** — `uv sync`
+2. **Схема БД** — `uv run yargumark-init-db`
+3. **Реестры** — `uv run yargumark-registry-sync sync` (загрузка настроенных источников в `entities` / алиасы; удалённые и локальные fallback-данные зависят от конфигурации)
+4. **Обход новостей** (опционально) — `uv run yargumark-crawl` — флаги CLI паука в `src/yargumark/crawler/run.py`: `--start-url`, `--max-depth`, `--link-limit`, `--only-new`, `--fast-local`
+5. **NLP по документу** — `uv run yargumark-process-doc --doc-id N` или пакетно `uv run yargumark-process-doc --all --source uniyar --limit 500`
+6. **Переиндексация упоминаний** (без LLM) — `uv run yargumark-reindex` — пересборка `mentions` из `extracted_spans` и актуального реестра
+7. **Интерфейс** — `uv run streamlit run src/yargumark/app/main.py`
+8. **Бенчмарк** (опционально) — `uv run python scripts/benchmark.py` — сверка фикстур с БД при порогах demo/production
 
-Demo seed (small canned corpus):
+Демо-наполнение (небольшой готовый корпус):
 
 ```bash
 uv run python scripts/seed_demo.py
 ```
 
-Optional: **LLM-assisted alias enrichment** for registry rows (uses Anthropic when enabled in that flow):
+Опционально: **обогащение алиасов реестра через LLM** (вызывает Anthropic в этом сценарии):
 
 ```bash
 uv run yargumark-enrich-aliases --help
 ```
 
-## CLI quick reference
+## Справочник CLI
 
-| Command | Purpose |
-|---------|---------|
-| `yargumark-init-db` | Create / migrate SQLite schema |
-| `yargumark-registry-sync` | Sync registry sources into the DB |
-| `yargumark-crawl` | Scrapy crawl for configured news hosts |
-| `yargumark-process-doc` | Haiku extraction + matcher (+ optional context check) |
-| `yargumark-reindex` | Rebuild `mentions` and clear render cache |
-| `yargumark-enrich-aliases` | Optional Haiku pass on registry aliases |
-| `yargumark-backfill-titles` | Backfill document titles from stored HTML |
+| Команда | Назначение |
+|---------|------------|
+| `yargumark-init-db` | создать / мигрировать схему SQLite |
+| `yargumark-registry-sync` | синхронизация источников реестра в БД |
+| `yargumark-crawl` | обход Scrapy для настроенных новостных хостов |
+| `yargumark-process-doc` | извлечение Haiku + матчер (+ опциональная context-проверка) |
+| `yargumark-reindex` | пересборка `mentions` и сброс render cache |
+| `yargumark-enrich-aliases` | опциональный проход Haiku по алиасам реестра |
+| `yargumark-backfill-titles` | дозаполнение заголовков документов из сохранённого HTML |
 
-## NLP cost (Haiku)
+<h2 id="nlp-cost-haiku">Стоимость NLP (Haiku)</h2>
 
-Heuristic USD math lives in **`src/yargumark/pricing.py`** (`estimate_llm_usd`, `estimate_document_extraction_pass_usd`, `estimate_alias_enrich_batch_usd`). Constants come from **one dev SQLite** (mostly `uniyar` news + registry work); re-fit after you accumulate your own `llm_cache` rows.
+Эвристика в долларах и вспомогательные функции — в **`src/yargumark/pricing.py`** (`estimate_llm_usd`, `estimate_document_extraction_pass_usd`, `estimate_alias_enrich_batch_usd`). Константы сняты с **одной dev-базы SQLite** (в основном новости `uniyar` + работа с реестром); после накопления своих строк `llm_cache` их лучше пересчитать.
 
-### What gets billed
+### Что попадает в биллинг
 
-- **Main extraction** (`yargumark-process-doc`): roughly **one** `messages` call per **distinct article body** (cache key is `sha256(utf-8 body)` in `llm_cache`). Re-running on the same text does **not** call the API again for extraction.
-- **Alias enrichment** (`yargumark-enrich-aliases`): **one** Haiku call per **active** row in `entities` the first time each canonical name is enriched (cache key `alias_enrich:{normalized_name}`). Re-runs are cheap (cache hit, no API).
-- **Optional context check**: borderline **person** spans can add **extra** Haiku calls; totals below are **without** that tail risk.
-- **Prompt caching** (Anthropic): cached input is billed at a **lower** $/MTok than fresh input. Streamlit shows `cached_input_tokens`; `pricing.py` uses headline input/output rates only — **real invoices are often lower** on long batches.
+- **Основное извлечение** (`yargumark-process-doc`): примерно **один** вызов `messages` на **уникальное тело статьи** (ключ кэша `sha256(utf-8 body)` в `llm_cache`). Повторный прогон того же текста **не** дергает API для извлечения.
+- **Обогащение алиасов** (`yargumark-enrich-aliases`): **один** вызов Haiku на **активную** строку `entities` при первом обогащении каждого канонического имени (ключ `alias_enrich:{normalized_name}`). Повторы дешёвые (попадание в кэш, без API).
+- **Опциональная context-проверка**: пограничные спаны **person** могут добавить **дополнительные** вызовы Haiku; суммы ниже **без** этого хвоста риска.
+- **Prompt caching** (Anthropic): кэшированный ввод тарифицируется **ниже** $/MTok, чем «свежий» ввод. В Streamlit видно `cached_input_tokens`; в `pricing.py` заложены только базовые ставки input/output — **реальный счёт часто ниже** на длинных сериях.
 
-### Default $/MTok in code
+### Ставки $/MTok в коде
 
-**$0.80 / $4.00** per million **input / output** tokens (placeholder list-style rates for Haiku-class models). **Confirm** on [Anthropic API pricing](https://www.anthropic.com/api) for your exact model (e.g. Haiku 4.5).
+**$0.80 / $4.00** за миллион **input / output** токенов (ориентир по публичному прайсу для класса Haiku). **Сверьте** с [ценами Anthropic API](https://www.anthropic.com/api) для вашей конкретной модели (например Haiku 4.5).
 
-### Alias enrichment — «все нежелательные организации»
+### Обогащение алиасов — «все нежелательные организации»
 
-The CLI walks **every** `is_active=1` entity (all registry types). To budget **only** `undesirable_org`, multiply the **per-entity** numbers below by `SELECT COUNT(*) FROM entities WHERE is_active=1 AND type='undesirable_org'` on your DB (after `yargumark-registry-sync`). In one synced snapshot that count was **~195**; the published `fz255` undesirable list **drifts** over time (~high hundreds of rows in the upstream JSON is normal; inactive rows are dropped).
+CLI обходит **все** сущности с `is_active=1` (**все типы** реестра). Чтобы заложить бюджет **только** на `undesirable_org`, умножьте **на одну сущность** числа из таблицы на `SELECT COUNT(*) FROM entities WHERE is_active=1 AND type='undesirable_org'` в вашей БД (после `yargumark-registry-sync`). В одной синхронизированной выборке получалось **~195** строк; публикуемый список `fz255` нежелательных **живёт своей жизнью** (сотни строк в upstream JSON — норма; неактивные отбрасываются).
 
-Per **first-time** alias call (empirical average from `llm_cache` rows whose JSON is the alias payload only):
+На **первый** вызов алиасов (среднее по строкам `llm_cache`, где JSON — только полезная нагрузка алиасов):
 
-| Quantity | ~total tokens (in+out) | ~USD @ $0.80/$4 per MTok |
-|----------|------------------------|---------------------------|
-| 1 entity | ~415 | **~$0.0009** |
-| **~195** undesirable orgs | **~81k** | **~$0.18** |
-| ~1.7k (all active types in that DB: agents + undesirable + terrorist + banned) | **~705k** | **~$1.5** |
+| Объём | ~всего токенов (in+out) | ~USD при $0.80/$4 за MTok |
+|-------|-------------------------|----------------------------|
+| 1 сущность | ~415 | **~$0.0009** |
+| **~195** нежелательных организаций | **~81k** | **~$0.18** |
+| ~1.7k (все активные типы в той БД: агенты + нежелательные + террористы + запрещённые) | **~705k** | **~$1.5** |
 
-Formula: `estimate_alias_enrich_batch_usd(n)` in `pricing.py` (uses **~235** input + **~180** output tokens per entity on average in that sample).
+Формула в коде: `estimate_alias_enrich_batch_usd(n)` в `pricing.py` (в выборке в среднем **~235** input + **~180** output токенов на сущность).
 
-### Document extraction — «все страницы сайта»
+### Извлечение по документам — «все страницы сайта»
 
-There is **no authoritative public sitemap** that matches today’s URL shape (the hosted `sitemap_000.xml` is **stale / legacy** `detail.php` URLs). Treat **“все страницы”** as a **planning bracket**:
+**Нет** актуального публичного sitemap в форме сегодняшних URL (размещённый `sitemap_000.xml` — **устаревший**, в основном `detail.php`). Относитесь к **«всем страницам»** как к **диапазону для планирования**:
 
-| Scenario | How to think about `N` |
-|----------|-------------------------|
-| **What you already crawled** | `SELECT COUNT(*) FROM documents WHERE source='uniyar'` — often **~6–7k** URLs after a default crawl. |
-| **Fuller site coverage** | Raise `--max-depth`, `--link-limit`, add `--start-url` seeds; expect **roughly high single-digit thousands → low tens of thousands** of *HTML* pages depending on policy pages, faculties, and archives — **only a crawl or external `site:` index** narrows this. |
-| **Per-page NLP cost** | Scale by **`N` distinct bodies** you run through Haiku the **first** time (templates and duplicates hit extraction cache). |
+| Сценарий | Как оценить `N` |
+|----------|-----------------|
+| **Уже собрано краулером** | `SELECT COUNT(*) FROM documents WHERE source='uniyar'` — после типичного обхода часто **~6–7k** URL. |
+| **Шире покрыть сайт** | Поднять `--max-depth`, `--link-limit`, добавить сиды `--start-url`; ориентир **порядка нескольких тысяч → низкие десятки тысяч** HTML-страниц в зависимости от разделов, факультетов, архивов — сузить можно только **полным обходом** или внешним индексом вида `site:`. |
+| **Стоимость NLP на страницу** | Масштабируйте по **`N` уникальных тел**, которые один раз прогоняются через Haiku (шаблоны и дубликаты попадают в кэш извлечения). |
 
-Per **first-time** extraction (empirical **median** vs **mean** total tokens per document-with-cache in the same dev DB: **~1.3k** vs **~2.5k** total; split encoded as **~734 / ~523** vs **~1451 / ~1033** input/output tokens in `pricing.py`):
+На **первый** прогон извлечения (в той же dev-базе: **медиана** и **среднее** суммарных токенов на документ с кэшем **~1.3k** и **~2.5k**; в `pricing.py` заложены сплиты **~734 / ~523** и **~1451 / ~1033** input/output):
 
-| New unique bodies `N` | ~total tokens (median profile) | ~USD (median) | ~total tokens (mean profile) | ~USD (mean) |
-|-------------------------|----------------------------------|---------------|--------------------------------|-------------|
+| Новых уникальных тел `N` | ~всего токенов (профиль median) | ~USD (median) | ~всего токенов (профиль mean) | ~USD (mean) |
+|----------------------------|----------------------------------|---------------|--------------------------------|-------------|
 | 1 000 | ~1.26M | ~$2.7 | ~2.48M | ~$5.3 |
-| **~6.3k** (typical current crawl) | **~7.9M** | **~$17** | **~15.6M** | **~$33** |
+| **~6.3k** (типичный текущий обход) | **~7.9M** | **~$17** | **~15.6M** | **~$33** |
 | 10 000 | ~12.6M | ~$27 | ~24.8M | ~$53 |
 | 15 000 | ~18.8M | ~$40 | ~37.3M | ~$80 |
 
-Use `estimate_document_extraction_pass_usd(N, profile="median"|"mean")` in code.
+В коде: `estimate_document_extraction_pass_usd(N, profile="median"|"mean")`.
 
-**Scaling:** multiply by the number of **distinct bodies** you actually process once. Empty-body pages are **skipped** by the crawler pipeline and never become `documents` rows with NLP cache in the usual path — see `src/yargumark/crawler/pipelines.py`.
+**Масштаб:** умножайте на число **уникальных тел**, которые реально обрабатываете один раз. Страницы с **пустым телом** после извлечения текста **не пишутся** в пайплайне краулера и в обычном пути не становятся строками `documents` с NLP-кэшем — см. `src/yargumark/crawler/pipelines.py`.
 
-## Quick Start (Day 1)
+## Быстрый старт (день 1)
 
 ```bash
 uv sync
@@ -165,7 +165,7 @@ uv run streamlit run src/yargumark/app/main.py
 uv run python scripts/benchmark.py
 ```
 
-Static checks:
+Статический анализ:
 
 ```bash
 uv run ruff check .
@@ -173,14 +173,14 @@ uv run mypy src
 uv run pyright
 ```
 
-## Кратко по-русски
+### Чеклист
 
-1. `uv sync` → скопировать `.env` из `.env.example`, выставить `ANTHROPIC_API_KEY` и при необходимости `DB_PATH`.
+1. `uv sync` → скопировать `.env` из `.env.example`, задать `ANTHROPIC_API_KEY` и при необходимости `DB_PATH`.
 2. `uv run yargumark-init-db` — схема SQLite.
 3. `uv run yargumark-registry-sync sync` — загрузка реестров в БД.
-4. `uv run yargumark-crawl` — обход новостей (см. флаги в коде CLI паука).
-5. `uv run yargumark-process-doc --doc-id …` или `--all --source uniyar --limit N` — извлечение Haiku + матчинг; **повтор по тому же тексту тела статьи идёт из кэша**, отдельный вызов за извлечение не платится.
+4. `uv run yargumark-crawl` — обход новостей (флаги в CLI паука).
+5. `uv run yargumark-process-doc --doc-id …` или `--all --source uniyar --limit N` — Haiku + матчинг; **повтор по тому же телу статьи идёт из кэша**, отдельный платёж за извлечение не взимается.
 6. `uv run yargumark-reindex` — пересборка `mentions` без LLM.
-7. `uv run streamlit run src/yargumark/app/main.py` — интерфейс.
+7. `uv run streamlit run src/yargumark/app/main.py` — веб-интерфейс.
 
-Оценка денег: **страницы** — ориентир **~$0.003** за первичное извлечение с «типичного» тела (медиана) и **~$0.005** по среднему; **~6k уникальных тел** порядка **$17 / $33** (медиана / средний профиль) при $0.80/$4 за MTok; **10–15k** страниц — умножить на те же доллары/страницу (см. таблицу в разделе [NLP cost](#nlp-cost-haiku)). **Алиасы**: только нежелательные (**~195** строк в одной синхронизированной базе) — порядка **~81k токенов и ~$0.18** один раз; все активные сущности всех типов в той же базе — **~$1.5**. Реальный счёт ниже при prompt cache; context-check не включён. Подробности и функции — `src/yargumark/pricing.py`.
+**Оценка денег:** по **страницам** — ориентир **~$0.003** за первичное извлечение с «типичного» тела (медиана) и **~$0.005** по среднему; **~6k уникальных тел** — порядка **$17 / $33** (median / mean) при $0.80/$4 за MTok; для **10–15k** страниц умножьте на те же доллары на страницу (таблица выше). По **алиасам**: только нежелательные (**~195** в одной синхронизированной базе) — **~81k токенов и ~$0.18** один раз; все активные сущности всех типов в той же базе — **~$1.5**. Реальный счёт ниже при prompt cache; context-check не включён. Детали — `src/yargumark/pricing.py`.
