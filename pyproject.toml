@@ -1,7 +1,7 @@
 [project]
 name = "yargumark"
 version = "0.1.0"
-description = "YarguMark MVP for legal mention marking"
+description = "YarguMark: разметка упоминаний реестров в текстах новостей"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

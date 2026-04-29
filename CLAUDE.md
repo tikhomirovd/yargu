@@ -39,3 +39,6 @@ At the end of each work session, append concise notes for:
 - Scrapy 2.15: `YarguDocumentPipeline` — `from_crawler` + хуки без аргумента `spider` (иначе asyncio-ветка ItemPipeline зовёт `open_spider()` без аргументов и возможен TypeError, если параметр не называется `spider`). Старт паука через `start_urls` в `__init__`, без переопределения `start_requests`.
 - Registry parser: добавлен источник `fedsfm` (Росфинмониторинг, только разделы `Организации` из `terrorists-catalog-portal-act`) с browser-like headers + `verify=False` из-за SSL/403 в `requests`; парсер собирает многострочные записи и алиасы из скобок `(...)` по `;`, `registry_id` формата `org/{n}`.
 - Haiku cost: README + `pricing.py` — ориентир **~1.3k (median) / ~2.5k (mean) total tokens** на документ с записью в `llm_cache` (локальная выборка uniyar); дефолт **$0.80/$4.00 per MTok** input/output (проверять на anthropic.com); извлечение кэшируется по `sha256(body)`; prompt cache и context-check не полностью отражены в простой USD-формуле.
+
+## 2026-04-30
+- README переписан под пользовательский финальный вид (без трека/KPI/«день 1»); акцент: одна SQLite, кэш LLM, reindex без LLM при обновлении реестров. Папка `docs/` с план-треками и чеклистами удалена из репозитория.
