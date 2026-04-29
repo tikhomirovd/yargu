@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-# Rough USD per 1M tokens for the configured model; update when Anthropic pricing changes.
-# Not a billing quote — demo estimate only.
-DEFAULT_INPUT_USD_PER_MILLION = 1.0
-DEFAULT_OUTPUT_USD_PER_MILLION = 5.0
+# Rough USD per 1M tokens for Claude 3.5 Haiku-class models; update when Anthropic pricing changes.
+# Public list prices are often around $0.80 / $4.00 per MTok (input / output); confirm on
+# https://www.anthropic.com/api before budgeting. Not a billing quote — demo estimate only.
+DEFAULT_INPUT_USD_PER_MILLION = 0.8
+DEFAULT_OUTPUT_USD_PER_MILLION = 4.0
 
 
 def estimate_llm_usd(
