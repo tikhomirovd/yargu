@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from typing import Literal
 
-# Rough USD per 1M tokens for Claude Haiku (e.g. 4.5); update when Anthropic pricing changes.
-# Public list prices are often around $0.80 / $4.00 per MTok (input / output); confirm on
-# https://www.anthropic.com/api before budgeting. Not a billing quote — demo estimate only.
+# Заметка по смыслу оценок:
+# - Константы ниже с «_DOCUMENT_*» / «_ALIAS_*» задают в первую очередь **объём токенов**
+#   (измерено в dev на одной модели Haiku); при смене модели порядок величины часто близок,
+#   но фактические счётчики могут отличаться.
+# - Суммы в USD зависят **только от выбранных ставок** DEFAULT_* и аргументов estimate_*;
+#   **цену за 1M input/output уточняйте у конкретной модели и провайдера** и подставляйте свои
+#   значения — цифры по умолчанию не претендуют на актуальный биллинг.
+#
+# Placeholder USD/MTok (often near public Haiku-class list rates at Anthropic); confirm at
+# https://www.anthropic.com/api for the model you set in ANTHROPIC_MODEL.
 DEFAULT_INPUT_USD_PER_MILLION = 0.8
 DEFAULT_OUTPUT_USD_PER_MILLION = 4.0
 
