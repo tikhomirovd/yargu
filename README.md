@@ -57,7 +57,7 @@ Important variables (see `.env.example` for the full list):
 | Variable | Role |
 |----------|------|
 | `ANTHROPIC_API_KEY` | Required for Haiku extraction / checks |
-| `ANTHROPIC_MODEL` | Default Haiku snapshot used by the client |
+| `ANTHROPIC_MODEL` | Model id for the Anthropic client (default in repo: `claude-haiku-4-5-20251001`; alias `claude-haiku-4-5` tracks the latest 4.5 snapshot) |
 | `DB_PATH` | SQLite file (default `data/yargumark.db`) |
 | `MODE` | `demo` vs `production` — confidence thresholds in the UI |
 | `DEMO_CONFIDENCE_THRESHOLD` / `PRODUCTION_CONFIDENCE_THRESHOLD` | Matcher cutoffs |

@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     mode: str = Field(default="demo", alias="MODE")
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
     anthropic_model: str = Field(
-        default="claude-3-5-haiku-20241022",
+        default="claude-haiku-4-5-20251001",
         alias="ANTHROPIC_MODEL",
     )
     db_path: Path = Field(default=Path("data/yargumark.db"), alias="DB_PATH")
