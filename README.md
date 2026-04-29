@@ -100,32 +100,55 @@ uv run yargumark-enrich-aliases --help
 
 ## NLP cost (Haiku)
 
+Heuristic USD math lives in **`src/yargumark/pricing.py`** (`estimate_llm_usd`, `estimate_document_extraction_pass_usd`, `estimate_alias_enrich_batch_usd`). Constants come from **one dev SQLite** (mostly `uniyar` news + registry work); re-fit after you accumulate your own `llm_cache` rows.
+
 ### What gets billed
 
-- **Main extraction**: roughly **one** `messages` call per **distinct article body** (cache key is `sha256(utf-8 body)` in `llm_cache`). Re-running `yargumark-process-doc` on the same text hits the cache and does not spend another extraction call.
-- **Optional context check**: borderline **person** spans can trigger **additional** Haiku calls; those are **not** always reflected in the same per-body rollup, so treat totals as a lower bound when many person hits sit in the check band.
-- **Prompt caching** (Anthropic): long system prompts may accumulate **cached read** tokens at a lower $/MTok than fresh input. The Streamlit cost panel shows `cached_input_tokens`; the built-in USD helper uses headline input/output rates only — **real invoices can be lower** on large batches.
+- **Main extraction** (`yargumark-process-doc`): roughly **one** `messages` call per **distinct article body** (cache key is `sha256(utf-8 body)` in `llm_cache`). Re-running on the same text does **not** call the API again for extraction.
+- **Alias enrichment** (`yargumark-enrich-aliases`): **one** Haiku call per **active** row in `entities` the first time each canonical name is enriched (cache key `alias_enrich:{normalized_name}`). Re-runs are cheap (cache hit, no API).
+- **Optional context check**: borderline **person** spans can add **extra** Haiku calls; totals below are **without** that tail risk.
+- **Prompt caching** (Anthropic): cached input is billed at a **lower** $/MTok than fresh input. Streamlit shows `cached_input_tokens`; `pricing.py` uses headline input/output rates only — **real invoices are often lower** on long batches.
 
 ### Default $/MTok in code
 
-`src/yargumark/pricing.py` uses **illustrative** list-style defaults (**$0.80 / $4.00** per million input / output tokens). **Confirm current numbers** on [Anthropic API pricing](https://www.anthropic.com/api) before signing off budgets.
+**$0.80 / $4.00** per million **input / output** tokens (placeholder list-style rates for Haiku-class models). **Confirm** on [Anthropic API pricing](https://www.anthropic.com/api) for your exact model (e.g. Haiku 4.5).
 
-### Empirical snapshot (one dev database, ~6.3k `uniyar` rows)
+### Alias enrichment — «все нежелательные организации»
 
-Measured from SQLite: documents whose body matched an `llm_cache` row used for extraction, **median ≈ 1.3k total tokens/doc**, **mean ≈ 2.5k**, **p90 ≈ 4.7k** (input+output as recorded). Unique cached extraction bodies in that snapshot: **121** rows for **158** processed docs (duplicate bodies amortize cost).
+The CLI walks **every** `is_active=1` entity (all registry types). To budget **only** `undesirable_org`, multiply the **per-entity** numbers below by `SELECT COUNT(*) FROM entities WHERE is_active=1 AND type='undesirable_org'` on your DB (after `yargumark-registry-sync`). In one synced snapshot that count was **~195**; the published `fz255` undesirable list **drifts** over time (~high hundreds of rows in the upstream JSON is normal; inactive rows are dropped).
 
-### Rough USD vs number of pages
+Per **first-time** alias call (empirical average from `llm_cache` rows whose JSON is the alias payload only):
 
-Assume **one unique body per page** and use **median ~1.3k** and **mean ~2.5k** total tokens with the same **mean input/output split** as in that snapshot (~58% / ~42% of tokens). At **$0.80 / $4.00 per MTok**:
+| Quantity | ~total tokens (in+out) | ~USD @ $0.80/$4 per MTok |
+|----------|------------------------|---------------------------|
+| 1 entity | ~415 | **~$0.0009** |
+| **~195** undesirable orgs | **~81k** | **~$0.18** |
+| ~1.7k (all active types in that DB: agents + undesirable + terrorist + banned) | **~705k** | **~$1.5** |
 
-| New unique pages | ~USD (median-shaped est.) | ~USD (mean-shaped est.) |
-|------------------|---------------------------|-------------------------|
-| 100 | ~$0.27 | ~$0.53 |
-| 500 | ~$1.3 | ~$2.6 |
-| 1 000 | ~$2.7 | ~$5.3 |
-| 6 000 | ~$16 | ~$32 |
+Formula: `estimate_alias_enrich_batch_usd(n)` in `pricing.py` (uses **~235** input + **~180** output tokens per entity on average in that sample).
 
-**Scaling:** multiply the per-page column by your expected count of **distinct bodies** you will actually send to Haiku the first time. Template pages, duplicates, and re-runs after cache warm-up cost **much less**.
+### Document extraction — «все страницы сайта»
+
+There is **no authoritative public sitemap** that matches today’s URL shape (the hosted `sitemap_000.xml` is **stale / legacy** `detail.php` URLs). Treat **“все страницы”** as a **planning bracket**:
+
+| Scenario | How to think about `N` |
+|----------|-------------------------|
+| **What you already crawled** | `SELECT COUNT(*) FROM documents WHERE source='uniyar'` — often **~6–7k** URLs after a default crawl. |
+| **Fuller site coverage** | Raise `--max-depth`, `--link-limit`, add `--start-url` seeds; expect **roughly high single-digit thousands → low tens of thousands** of *HTML* pages depending on policy pages, faculties, and archives — **only a crawl or external `site:` index** narrows this. |
+| **Per-page NLP cost** | Scale by **`N` distinct bodies** you run through Haiku the **first** time (templates and duplicates hit extraction cache). |
+
+Per **first-time** extraction (empirical **median** vs **mean** total tokens per document-with-cache in the same dev DB: **~1.3k** vs **~2.5k** total; split encoded as **~734 / ~523** vs **~1451 / ~1033** input/output tokens in `pricing.py`):
+
+| New unique bodies `N` | ~total tokens (median profile) | ~USD (median) | ~total tokens (mean profile) | ~USD (mean) |
+|-------------------------|----------------------------------|---------------|--------------------------------|-------------|
+| 1 000 | ~1.26M | ~$2.7 | ~2.48M | ~$5.3 |
+| **~6.3k** (typical current crawl) | **~7.9M** | **~$17** | **~15.6M** | **~$33** |
+| 10 000 | ~12.6M | ~$27 | ~24.8M | ~$53 |
+| 15 000 | ~18.8M | ~$40 | ~37.3M | ~$80 |
+
+Use `estimate_document_extraction_pass_usd(N, profile="median"|"mean")` in code.
+
+**Scaling:** multiply by the number of **distinct bodies** you actually process once. Empty-body pages are **skipped** by the crawler pipeline and never become `documents` rows with NLP cache in the usual path — see `src/yargumark/crawler/pipelines.py`.
 
 ## Quick Start (Day 1)
 
@@ -160,4 +183,4 @@ uv run pyright
 6. `uv run yargumark-reindex` — пересборка `mentions` без LLM.
 7. `uv run streamlit run src/yargumark/app/main.py` — интерфейс.
 
-Оценка денег: ориентир **~$0.003 на «типичную» страницу** (медиана по выборке) и **~$0.005** по среднему при тех же допущениях о $/MTok; **6k уникальных страниц** порядка **$16–32** за первичный прогон извлечения без учёта скидки prompt cache и без массовых context-check. Точные цифры — в биллинге Anthropic и в панели Streamlit по токенам.
+Оценка денег: **страницы** — ориентир **~$0.003** за первичное извлечение с «типичного» тела (медиана) и **~$0.005** по среднему; **~6k уникальных тел** порядка **$17 / $33** (медиана / средний профиль) при $0.80/$4 за MTok; **10–15k** страниц — умножить на те же доллары/страницу (см. таблицу в разделе [NLP cost](#nlp-cost-haiku)). **Алиасы**: только нежелательные (**~195** строк в одной синхронизированной базе) — порядка **~81k токенов и ~$0.18** один раз; все активные сущности всех типов в той же базе — **~$1.5**. Реальный счёт ниже при prompt cache; context-check не включён. Подробности и функции — `src/yargumark/pricing.py`.
